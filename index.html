@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Cashflow + Loan Simulator</title>
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script defer src="main.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 1.5rem;
+      background: #f9f9f9;
+    }
+    h1, h2 {
+      text-align: center;
+    }
+    .section {
+      max-width: 1100px;
+      margin: 1.5rem auto;
+      background: #fff;
+      padding: 1.5rem;
+      border-radius: 10px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 6px;
+      text-align: center;
+    }
+    th {
+      background: #444;
+      color: white;
+    }
+    td[contenteditable="true"] {
+      background: #e0f7fa;
+    }
+    label, select, input, button {
+      margin: 0.5rem 0;
+    }
+    canvas {
+      max-width: 100%;
+      margin-top: 2rem;
+    }
+    .controls, .repayment-entry {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .dashboard {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+    .card {
+      background: #ffffff;
+      border: 1px solid #ccc;
+      padding: 1rem 1.5rem;
+      border-radius: 10px;
+      min-width: 200px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+    .card h3 {
+      margin: 0 0 0.5rem;
+      font-size: 1.1rem;
+    }
+    .card p {
+      font-size: 1.25rem;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>Cashflow Dashboard with Loan Impact (€)</h1>
+
+  <div class="section">
+    <h2>Add Repayment Entry</h2>
+    <div class="repayment-entry">
+      <input type="number" id="entryAmount" placeholder="Amount in €" min="0" />
+      <select id="entryMonth">
+        <option value="">Month</option>
+        <option>January</option>
+        <option>February</option>
+        <option>March</option>
+        <option>April</option>
+        <option>May</option>
+        <option>June</option>
+        <option>July</option>
+        <option>August</option>
+        <option>September</option>
+        <option>October</option>
+        <option>November</option>
+        <option>December</option>
+      </select>
+      <select id="entryWeek">
+        <option value="">Week</option>
+        <option value="0">Week 1</option>
+        <option value="1">Week 2</option>
+        <option value="2">Week 3</option>
+        <option value="3">Week 4</option>
+      </select>
+      <button onclick="addRepaymentEntry()">+ Add Repayment</button>
+    </div>
+    <table>
+      <thead><tr><th>Amount</th><th>Month</th><th>Week</th><th>Action</th></tr></thead>
+      <tbody id="repaymentList"></tbody>
+    </table>
+    <button onclick="applyRepayment()" style="margin-top:1rem">Apply All Repayments</button>
+  </div>
+
+  <div class="section">
+    <h2>Cashflow Table (Editable)</h2>
+    <input type="file" accept=".csv" id="csvUpload" />
+    <div id="table-container"></div>
+  </div>
+
+  <div class="section">
+    <h2>Cashflow Charts</h2>
+    <canvas id="balanceChart"></canvas>
+    <canvas id="flowChart"></canvas>
+    <canvas id="forecastChart"></canvas>
+  </div>
+</body>
+</html>
