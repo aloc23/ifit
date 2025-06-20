@@ -1,12 +1,5 @@
-
-body {
-    font-family: Arial, sans-serif;
-    padding: 20px;
-}
-h1 {
-    color: #333;
-}
-#tableContainer {
-    overflow-x: auto;
-    max-width: 100%;
-}
+body { font-family: Arial; padding: 20px; }
+h1 { font-size: 24px; }
+#tablePreview.collapsed { display: none; }
+table, td, th { border: 1px solid #ccc; border-collapse: collapse; padding: 4px; }
+td.highlight { background: #ffeeba; }
