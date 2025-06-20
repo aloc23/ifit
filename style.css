@@ -1,0 +1,6 @@
+
+body { font-family: sans-serif; margin: 20px; }
+h1 { font-size: 22px; }
+input, select, button { padding: 6px; margin: 6px; }
+table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+td { border: 1px solid #ccc; padding: 5px; font-size: 14px; }
