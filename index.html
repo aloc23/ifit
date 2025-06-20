@@ -1,23 +1,52 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <title>📊 Cashflow Forecast Tool</title>
-    <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cashflow Forecast Tool</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    <div class="container">
-        <h1>📊 Cashflow Forecast Tool</h1>
-        <input type="file" id="fileInput" />
-        <button id="addRepaymentBtn">➕ Add Repayment</button>
-        <button id="applyBtn">✅ Apply All</button>
-        <button id="exportBtn">💾 Export Excel</button>
-        <button id="toggleTableBtn">🗃️ Toggle Table View</button>
-        <div id="repaymentInputs"></div>
-        <div id="chartContainer"></div>
-        <div id="tableContainer"></div>
-    </div>
-    <script src="script.js"></script>
+  <div class="app">
+    <header>
+      <h1>📊 iFit Cashflow Forecast Tool</h1>
+    </header>
+
+    <section class="upload-section">
+      <input type="file" id="csvUpload" accept=".csv,.xlsx" />
+    </section>
+
+    <section class="repayment-section">
+      <h2>➕ Add Repayment</h2>
+      <div id="repaymentForm">
+        <div class="repayment-row">
+          <select class="week-dropdown"></select>
+          <input type="number" class="repayment-amount" placeholder="Amount €" />
+        </div>
+        <button id="addRepaymentRow">Add Another</button>
+        <button id="applyRepayments">Apply Repayments</button>
+      </div>
+      <div id="remainingBalance">Remaining to repay: €355,000</div>
+    </section>
+
+    <section class="chart-section">
+      <canvas id="forecastChart"></canvas>
+    </section>
+
+    <section class="table-section">
+      <div class="table-controls">
+        <button id="toggleTable">Toggle Full View</button>
+        <button id="exportCSV">Export CSV</button>
+      </div>
+      <div id="tablePreview"></div>
+    </section>
+
+    <footer>
+      <p>&copy; 2025 iFit Forecast Tool</p>
+    </footer>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
