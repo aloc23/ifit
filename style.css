@@ -1,0 +1,27 @@
+
+body {
+  font-family: Arial, sans-serif;
+  margin: 20px;
+  background-color: #f9f9f9;
+}
+#repaymentFormContainer {
+  margin-top: 20px;
+}
+.repayment-row {
+  margin-bottom: 10px;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+th, td {
+  border: 1px solid #ccc;
+  padding: 5px;
+  text-align: center;
+}
+.highlight {
+  background-color: #ffeeba;
+}
+.collapsed {
+  display: none;
+}
