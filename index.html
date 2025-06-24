@@ -1,25 +1,36 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Cashflow Forecast Tool</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>Cashflow Forecast Tool</h1>
-  <input type="file" id="fileUpload" accept=".xlsx" />
-  <div id="repaymentFormContainer">
-    <button id="addRepaymentRow">➕ Add Repayment</button>
-    <div id="repaymentForm"></div>
-    <button id="applyRepayments">✅ Apply Repayments</button>
+  <div class="container">
+    <h1>💶 Cashflow Forecast Tool</h1>
+
+    <div class="upload-section">
+      <input type="file" id="xlsxUpload" accept=".xlsx" />
+      <div id="remainingBalance">Remaining: €355,000</div>
+    </div>
+
+    <div class="repayment-controls">
+      <div id="repaymentSection"></div>
+      <button id="addRepayment">➕ Add Repayment</button>
+      <button id="applyRepayments">✅ Apply Repayments</button>
+      <button id="exportXLSX">💾 Export</button>
+    </div>
+
+    <div class="view-controls">
+      <button id="toggleTable">🗃️ Toggle Full Table</button>
+    </div>
+
+    <canvas id="forecastChart"></canvas>
+
+    <div id="tablePreview" class="collapsed"></div>
   </div>
-  <div id="remainingBalance">Remaining Mayweather Balance: <strong>€355,000</strong></div>
-  <canvas id="forecastChart" height="100"></canvas>
-  <button id="toggleTable">🗃️ Toggle Table View</button>
-  <button id="exportFile">📤 Export to Excel</button>
-  <div id="tablePreview" class="collapsed"></div>
+
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="script.js"></script>
