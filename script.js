@@ -1,4 +1,4 @@
-let workbook, data = [], repaymentRows = [], remaining = 355000, chart;
+let workbook, data = [], remaining = 355000, chart;
 let weekStartCol = 5;
 let repaymentRowIdx, cashPositionRowIdx, rollingBalanceRowIdx;
 
@@ -13,7 +13,7 @@ function loadXLSX(file) {
     detectSpecialRows();
     detectWeekStartCol();
     renderTable();
-    populateDropdowns();
+    addRepaymentRow(); // add initial row
     drawChart();
   };
   reader.readAsBinaryString(file);
@@ -38,45 +38,54 @@ function detectWeekStartCol() {
   }
 }
 
-function populateDropdowns() {
-  const headerRow = data[3], yearRow = data[2];
+function addRepaymentRow() {
   const section = document.getElementById("repaymentSection");
-  section.innerHTML = ""; // reset on each load
+  const headerRow = data[3] || [];
+  const yearRow = data[2] || [];
 
-  const options = [];
+  const container = document.createElement("div");
+  container.className = "repayment-row";
+
+  const select = document.createElement("select");
   for (let i = weekStartCol; i < headerRow.length; i++) {
-    const week = headerRow[i], year = yearRow[i];
+    const week = headerRow[i];
+    const year = yearRow[i];
     if (/Week/.test(week) && /\d{4}/.test(year)) {
-      options.push(`<option value="${i}">Week ${week} (${year})</option>`);
+      const option = document.createElement("option");
+      option.value = i;
+      option.text = `Week ${week} (${year})`;
+      select.appendChild(option);
     }
   }
 
-  if (options.length === 0) return;
-  const container = document.createElement("div");
-  container.className = "repayment-row";
-  container.innerHTML = `
-    <select>${options.join("")}</select>
-    <input type="number" placeholder="Amount €" />
-  `;
+  const input = document.createElement("input");
+  input.type = "number";
+  input.placeholder = "Amount €";
+
+  container.appendChild(select);
+  container.appendChild(input);
   section.appendChild(container);
 }
 
 function applyRepayments() {
   remaining = 355000;
-  repaymentRows = [];
+
+  // Reset repayment values before reapplying
+  for (let i = weekStartCol; i < data[0].length; i++) {
+    data[repaymentRowIdx][i] = 0;
+  }
 
   document.querySelectorAll(".repayment-row").forEach(r => {
     const col = parseInt(r.querySelector("select").value);
     let val = parseFloat(r.querySelector("input").value);
     if (!isNaN(col) && !isNaN(val)) {
       val = -Math.abs(val);
-      repaymentRows.push({ col, val });
-      if (!data[repaymentRowIdx][col]) data[repaymentRowIdx][col] = 0;
       data[repaymentRowIdx][col] = (parseFloat(data[repaymentRowIdx][col]) || 0) + val;
       remaining -= val;
     }
   });
 
+  // Recalculate Weekly income/cash position
   for (let i = weekStartCol; i < data[0].length; i++) {
     let total = 0;
     for (let r = 0; r < cashPositionRowIdx; r++) {
@@ -86,6 +95,7 @@ function applyRepayments() {
     data[cashPositionRowIdx][i] = total.toFixed(2);
   }
 
+  // Recalculate rolling cash balance
   for (let i = weekStartCol; i < data[0].length; i++) {
     const prev = i === weekStartCol ? 0 : parseFloat(data[rollingBalanceRowIdx][i - 1]) || 0;
     const cash = parseFloat(data[cashPositionRowIdx][i]) || 0;
@@ -107,7 +117,7 @@ function renderTable() {
     row.forEach((cell, j) => {
       const td = document.createElement(i === 0 ? "th" : "td");
       td.textContent = cell;
-      if (repaymentRows.some(r => r.col === j && i === repaymentRowIdx)) td.classList.add("highlight");
+      if (i === repaymentRowIdx && cell !== 0) td.classList.add("highlight");
       tr.appendChild(td);
     });
     table.appendChild(tr);
@@ -148,8 +158,8 @@ function drawChart() {
   }
 }
 
-// Event bindings
-document.getElementById("addRepayment").addEventListener("click", populateDropdowns);
+// Bind buttons
+document.getElementById("addRepayment").addEventListener("click", addRepaymentRow);
 document.getElementById("applyRepayments").addEventListener("click", applyRepayments);
 document.getElementById("xlsxUpload").addEventListener("change", e => loadXLSX(e.target.files[0]));
 document.getElementById("toggleTable").addEventListener("click", () => {
