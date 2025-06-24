@@ -1,58 +1,56 @@
 body {
   font-family: 'Segoe UI', sans-serif;
-  background-color: #f8f9fa;
-  color: #333;
   padding: 20px;
-}
-.container {
-  max-width: 1000px;
-  margin: auto;
-}
-h1 {
-  text-align: center;
-  color: #0077cc;
-}
-input[type="file"], input[type="number"], select {
-  margin: 5px;
-  padding: 5px;
+  background: #f9f9f9;
 }
 button {
   margin: 5px;
   padding: 6px 12px;
-  font-weight: bold;
-  background-color: #007bff;
-  border: none;
+  background: #0077cc;
   color: white;
+  border: none;
   border-radius: 4px;
   cursor: pointer;
 }
 button:hover {
-  background-color: #0056b3;
+  background: #005fa3;
 }
-#tablePreview table {
+#summary {
+  margin-top: 10px;
+  font-size: 16px;
+}
+#summaryCards {
+  display: flex;
+  gap: 1rem;
+  margin: 15px 0;
+}
+.card {
+  background: #fff;
+  padding: 10px;
+  border-radius: 4px;
+  border-left: 4px solid #0077cc;
+  font-size: 14px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+canvas {
+  margin-top: 30px;
+  max-width: 100%;
+}
+table {
+  font-size: 12px;
   border-collapse: collapse;
+  margin-top: 20px;
   width: 100%;
 }
-#tablePreview td, #tablePreview th {
-  border: 1px solid #ccc;
-  padding: 4px;
-  text-align: center;
+td, th {
+  border: 1px solid #ddd;
+  padding: 4px 8px;
+  text-align: right;
+}
+tr:nth-child(odd) {
+  background-color: #f0f8ff;
 }
 .highlight {
-  background-color: #fff3cd;
-}
-.collapsed {
-  max-height: 400px;
-  overflow: auto;
-}
-.upload-section, .repayment-controls, .view-controls {
-  margin: 10px 0;
-}
-#forecastChart {
-  margin-top: 20px;
-}
-.repayment-row {
-  display: flex;
-  align-items: center;
-  margin-bottom: 5px;
+  background: #ffeeba;
+  font-weight: bold;
 }
