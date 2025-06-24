@@ -2,36 +2,40 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <metname="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>📊 Cashflow Forecast Tool</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cashflow Forecast Tool</title>
+  <link rel="stylesheet" href="style.css?v=123" />
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <h1>📈 Cashflow Forecast Tool</h1>
+  <div class="container">
+    <h1>📉 <span style="color:#007bff;">Cashflow Forecast Tool</span></h1>
 
-  <input type="file" id="fileInput" />
-  <div id="summary"><strong>Remaining:</strong> <span id="remaining">€355,000</span></div>
+    <input type="file" id="fileInput" accept=".xlsx" />
+    <p><strong>Remaining:</strong> <span id="remaining">€355,000</span></p>
 
-  <div id="actionButtons">
-    <button onclick="addRepaymentRow()">➕ Add Repayment</button>
-    <button onclick="applyRepayments()">✅ Apply Repayments</button>
-    <button onclick="exportFile()">📁 Export</button>
-    <button onclick="toggleFullTable()">📋 Toggle Full Table</button>
+    <div class="repayment-controls">
+      <button id="addRepaymentBtn">➕ Add Repayment</button>
+      <button id="applyRepaymentsBtn">✅ Apply Repayments</button>
+      <button onclick="exportTableToExcel()">📁 Export</button>
+      <button onclick="toggleTable()">📋 Toggle Full Table</button>
+    </div>
+
+    <div class="repayment-container">
+      <!-- Repayment rows added here -->
+    </div>
+
+    <div class="summary-cards">
+      <div class="card"><strong>Total Repaid:</strong> <span id="totalRepaid">€0</span></div>
+      <div class="card"><strong>Final Balance:</strong> <span id="finalBalance">€0</span></div>
+      <div class="card"><strong>Lowest Week:</strong> <span id="lowestWeek">–</span></div>
+    </div>
+
+    <canvas id="chartCanvas" height="100"></canvas>
+    <div id="tableContainer" style="display: none;"></div>
   </div>
 
-  <div id="repayments"></div>
-
-  <div id="summaryCards">
-    <div class="card">Total Repaid: <span id="totalRepaid">€0</span></div>
-    <div class="card">Final Balance: <span id="finalBalance">€0</span></div>
-    <div class="card">Lowest Week: <span id="minWeek">–</span></div>
-  </div>
-
-  <canvas id="chartCanvas"></canvas>
-  <div id="tableContainer"></div>
-
-  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="script.js?v=123"></script>
+  <script src="script.js?v=123"></script>
 </body>
 </html>
