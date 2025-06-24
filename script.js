@@ -23,9 +23,35 @@ function handleFile(e) {
 }
 
 function addRepaymentRow() {
+  if (!headers.length) {
+    alert("Please upload a valid Excel file before adding a repayment.");
+    return;
+  }
+
   const container = document.getElementById("repayments");
   const div = document.createElement("div");
   div.className = "repayment-row";
+
+  const sel = document.createElement("select");
+  sel.className = "weekSelect";
+
+  headers.forEach((h, i) => {
+    if (typeof h === "string" && h.toLowerCase().includes("week")) {
+      const opt = document.createElement("option");
+      opt.value = i;
+      opt.textContent = h;
+      sel.appendChild(opt);
+    }
+  });
+
+  const inp = document.createElement("input");
+  inp.type = "number";
+  inp.placeholder = "Amount €";
+
+  div.appendChild(sel);
+  div.appendChild(inp);
+  container.appendChild(div);
+}
 
   const sel = document.createElement("select");
   sel.className = "weekSelect";
