@@ -17,7 +17,6 @@ function handleFile(e) {
     headers = raw.shift();
     data = raw;
     renderTable();
-    addRepaymentRow();
     updateChart();
   };
   reader.readAsBinaryString(e.target.files[0]);
@@ -27,18 +26,24 @@ function addRepaymentRow() {
   const container = document.getElementById("repayments");
   const div = document.createElement("div");
   div.className = "repayment-row";
+
   const sel = document.createElement("select");
   sel.className = "weekSelect";
   headers.forEach((h, i) => {
     if (typeof h === "string" && h.toLowerCase().includes("week")) {
       const opt = document.createElement("option");
-      opt.value = i; opt.textContent = h;
+      opt.value = i;
+      opt.textContent = h;
       sel.appendChild(opt);
     }
   });
+
   const inp = document.createElement("input");
-  inp.type = "number"; inp.placeholder = "Amount €";
-  div.append(sel, inp);
+  inp.type = "number";
+  inp.placeholder = "Amount €";
+
+  div.appendChild(sel);
+  div.appendChild(inp);
   container.appendChild(div);
 }
 
@@ -80,7 +85,7 @@ function updateCashflow() {
       sum += +(data[r][c] || 0);
     }
     data[iIdx][c] = sum;
-    const prev = +(data[bIdx][c-1] || 0);
+    const prev = +(data[bIdx][c - 1] || 0);
     data[bIdx][c] = prev + sum;
   }
 
@@ -94,14 +99,14 @@ function updateSummary() {
   const vals = data[bIdx].slice(1).map(n => +n);
   const min = Math.min(...vals);
   const final = vals[vals.length - 1];
-  document.getElementById("totalRepaid").textContent = `€${((originalBalance - remaining).toLocaleString())}`;
+  document.getElementById("totalRepaid").textContent = `€${(originalBalance - remaining).toLocaleString()}`;
   document.getElementById("finalBalance").textContent = `€${final.toLocaleString()}`;
   document.getElementById("minWeek").textContent = `${headers[vals.indexOf(min) + 1]}`;
 }
 
 function renderTable() {
-  const fullTbl = document.getElementById("tableContainer");
-  fullTbl.innerHTML = "";
+  const container = document.getElementById("tableContainer");
+  container.innerHTML = "";
   if (!fullTableVisible) return;
   const tbl = document.createElement("table");
   const hdr = tbl.createTHead().insertRow();
@@ -116,7 +121,7 @@ function renderTable() {
       if (typeof val === "number" && val < 0) td.classList.add("highlight");
     });
   });
-  fullTbl.appendChild(tbl);
+  container.appendChild(tbl);
 }
 
 function updateChart() {
@@ -127,12 +132,34 @@ function updateChart() {
   if (chart) chart.destroy();
   chart = new Chart(ctx, {
     type: "line",
-    data: { labels: labs, datasets: [{ label: "Cash Balance Forecast", data: vals, borderColor: "#0077cc", tension: 0.2 }] },
-    options: { scales: { y: { beginAtZero: false } } }
+    data: {
+      labels: labs,
+      datasets: [{
+        label: "Cash Balance Forecast",
+        data: vals,
+        borderColor: "#0077cc",
+        fill: false,
+        tension: 0.2,
+        pointRadius: 3,
+        pointBackgroundColor: "#0077cc"
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: {
+          beginAtZero: false
+        }
+      }
+    }
   });
 }
 
-function toggleFullTable() { fullTableVisible = !fullTableVisible; renderTable(); }
+function toggleFullTable() {
+  fullTableVisible = !fullTableVisible;
+  renderTable();
+}
+
 function exportFile() {
   const out = [headers, ...data];
   const ws = XLSX.utils.aoa_to_sheet(out);
