@@ -10,9 +10,7 @@
   <h1>📈 Cashflow Forecast Tool</h1>
 
   <input type="file" id="fileInput" />
-  <div id="summary">
-    <strong>Remaining:</strong> <span id="remaining">€355,000</span>
-  </div>
+  <div id="summary"><strong>Remaining:</strong> <span id="remaining">€355,000</span></div>
 
   <div id="summaryCards">
     <div class="card">Total Repaid: <span id="totalRepaid">€0</span></div>
@@ -21,7 +19,7 @@
   </div>
 
   <div id="repayments"></div>
-  <button onclick="addRepayment()">➕ Add Repayment</button>
+  <button onclick="addRepaymentRow()">➕ Add Repayment</button>
   <button onclick="applyRepayments()">✅ Apply Repayments</button>
   <button onclick="exportFile()">📁 Export</button>
   <button onclick="toggleFullTable()">📋 Toggle Full Table</button>
