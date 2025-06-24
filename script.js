@@ -13,7 +13,8 @@ function loadXLSX(file) {
     detectSpecialRows();
     detectWeekStartCol();
     renderTable();
-    addRepaymentRow(); // add initial row
+    document.getElementById("repaymentSection").innerHTML = "";
+    addRepaymentRow(); // initial input
     drawChart();
   };
   reader.readAsBinaryString(file);
@@ -48,8 +49,7 @@ function addRepaymentRow() {
 
   const select = document.createElement("select");
   for (let i = weekStartCol; i < headerRow.length; i++) {
-    const week = headerRow[i];
-    const year = yearRow[i];
+    const week = headerRow[i], year = yearRow[i];
     if (/Week/.test(week) && /\d{4}/.test(year)) {
       const option = document.createElement("option");
       option.value = i;
@@ -70,7 +70,12 @@ function addRepaymentRow() {
 function applyRepayments() {
   remaining = 355000;
 
-  // Reset repayment values before reapplying
+  // Make sure repayment row and rolling row exist
+  data[repaymentRowIdx] = data[repaymentRowIdx] || [];
+  data[cashPositionRowIdx] = data[cashPositionRowIdx] || [];
+  data[rollingBalanceRowIdx] = data[rollingBalanceRowIdx] || [];
+
+  // Initialize repayment row values
   for (let i = weekStartCol; i < data[0].length; i++) {
     data[repaymentRowIdx][i] = 0;
   }
@@ -79,13 +84,12 @@ function applyRepayments() {
     const col = parseInt(r.querySelector("select").value);
     let val = parseFloat(r.querySelector("input").value);
     if (!isNaN(col) && !isNaN(val)) {
-      val = -Math.abs(val);
+      val = -Math.abs(val); // ensure negative
       data[repaymentRowIdx][col] = (parseFloat(data[repaymentRowIdx][col]) || 0) + val;
-      remaining -= val;
+      remaining -= Math.abs(val);
     }
   });
 
-  // Recalculate Weekly income/cash position
   for (let i = weekStartCol; i < data[0].length; i++) {
     let total = 0;
     for (let r = 0; r < cashPositionRowIdx; r++) {
@@ -95,7 +99,6 @@ function applyRepayments() {
     data[cashPositionRowIdx][i] = total.toFixed(2);
   }
 
-  // Recalculate rolling cash balance
   for (let i = weekStartCol; i < data[0].length; i++) {
     const prev = i === weekStartCol ? 0 : parseFloat(data[rollingBalanceRowIdx][i - 1]) || 0;
     const cash = parseFloat(data[cashPositionRowIdx][i]) || 0;
@@ -158,7 +161,6 @@ function drawChart() {
   }
 }
 
-// Bind buttons
 document.getElementById("addRepayment").addEventListener("click", addRepaymentRow);
 document.getElementById("applyRepayments").addEventListener("click", applyRepayments);
 document.getElementById("xlsxUpload").addEventListener("change", e => loadXLSX(e.target.files[0]));
