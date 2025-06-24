@@ -1,27 +1,58 @@
-
 body {
-  font-family: Arial, sans-serif;
-  margin: 20px;
-  background-color: #f9f9f9;
+  font-family: 'Segoe UI', sans-serif;
+  background-color: #f8f9fa;
+  color: #333;
+  padding: 20px;
 }
-#repaymentFormContainer {
-  margin-top: 20px;
+.container {
+  max-width: 1000px;
+  margin: auto;
 }
-.repayment-row {
-  margin-bottom: 10px;
+h1 {
+  text-align: center;
+  color: #0077cc;
 }
-table {
+input[type="file"], input[type="number"], select {
+  margin: 5px;
+  padding: 5px;
+}
+button {
+  margin: 5px;
+  padding: 6px 12px;
+  font-weight: bold;
+  background-color: #007bff;
+  border: none;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+}
+button:hover {
+  background-color: #0056b3;
+}
+#tablePreview table {
   border-collapse: collapse;
   width: 100%;
 }
-th, td {
+#tablePreview td, #tablePreview th {
   border: 1px solid #ccc;
-  padding: 5px;
+  padding: 4px;
   text-align: center;
 }
 .highlight {
-  background-color: #ffeeba;
+  background-color: #fff3cd;
 }
 .collapsed {
-  display: none;
+  max-height: 400px;
+  overflow: auto;
+}
+.upload-section, .repayment-controls, .view-controls {
+  margin: 10px 0;
+}
+#forecastChart {
+  margin-top: 20px;
+}
+.repayment-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 5px;
 }
