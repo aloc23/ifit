@@ -1,140 +1,133 @@
-let workbook, worksheet, data, chart;
-let repayments = [];
+let rawData = [];
+let chart;
+let weekOptions = [];
 
 document.getElementById('fileInput').addEventListener('change', handleFile);
+document.getElementById('addRepayment').addEventListener('click', addRepaymentRow);
+document.getElementById('applyRepayments').addEventListener('click', applyRepayments);
 
 function handleFile(event) {
-    const reader = new FileReader();
-    reader.onload = function (e) {
-        const dataBinary = e.target.result;
-        workbook = XLSX.read(dataBinary, { type: 'binary' });
-        const sheetName = workbook.SheetNames[0];
-        worksheet = workbook.Sheets[sheetName];
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    const data = new Uint8Array(e.target.result);
+    const workbook = XLSX.read(data, { type: 'array' });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-        const raw = XLSX.utils.sheet_to_json(worksheet, { header: 1, range: 3 }); // row 4
-        const weeks = raw[0].slice(2); // week labels start from col index 2
-        data = raw.slice(1); // actual data begins from row 5
-
-        populateWeekSelect(weeks);
-        renderChart(weeks, data);
-        updateSummary(weeks, data);
-    };
-    reader.readAsBinaryString(event.target.files[0]);
+    rawData = json;
+    extractWeekOptions(json);
+    renderInitialChart();
+  };
+  reader.readAsArrayBuffer(event.target.files[0]);
 }
 
-function populateWeekSelect(weeks) {
-    const container = document.getElementById('repaymentContainer');
-    container.innerHTML = ''; // clear old
+function extractWeekOptions(data) {
+  const weeksRow = data[3] || [];
+  const labelsRow = data[2] || [];
 
-    addRepaymentRow(weeks);
+  weekOptions = weeksRow.map((weekLabel, i) => {
+    const label = typeof weekLabel === 'string' ? weekLabel.trim() : '';
+    if (label.toLowerCase().includes('week')) {
+      return { index: i, label: label };
+    }
+    return null;
+  }).filter(Boolean);
 }
 
-function addRepaymentRow(weeks) {
-    const container = document.getElementById('repaymentContainer');
+function addRepaymentRow() {
+  const container = document.getElementById('repaymentInputs');
+  const row = document.createElement('div');
+  row.className = 'repayment-row';
 
-    const rowDiv = document.createElement('div');
-    rowDiv.className = 'repayment-row';
+  const weekSelect = document.createElement('select');
+  weekOptions.forEach(week => {
+    const option = document.createElement('option');
+    option.value = week.index;
+    option.textContent = week.label;
+    weekSelect.appendChild(option);
+  });
 
-    const select = document.createElement('select');
-    weeks.forEach((week, i) => {
-        const option = document.createElement('option');
-        option.value = i;
-        option.textContent = week;
-        select.appendChild(option);
-    });
+  const amountInput = document.createElement('input');
+  amountInput.type = 'number';
+  amountInput.placeholder = 'Amount €';
 
-    const input = document.createElement('input');
-    input.type = 'number';
-    input.placeholder = 'Amount €';
-
-    rowDiv.appendChild(select);
-    rowDiv.appendChild(input);
-    container.appendChild(rowDiv);
+  row.appendChild(weekSelect);
+  row.appendChild(amountInput);
+  container.appendChild(row);
 }
 
 function applyRepayments() {
-    repayments = [];
-    const rows = document.querySelectorAll('.repayment-row');
+  if (weekOptions.length === 0 || rawData.length === 0) return;
 
-    rows.forEach(row => {
-        const select = row.querySelector('select');
-        const input = row.querySelector('input');
-        const weekIndex = parseInt(select.value);
-        const amount = parseFloat(input.value);
+  let base = 355000;
+  let repaymentData = Array(weekOptions.length).fill(0);
+  let totalRepayment = 0;
 
-        if (!isNaN(amount)) {
-            repayments.push({ weekIndex, amount });
+  document.querySelectorAll('.repayment-row').forEach(row => {
+    const weekIndex = parseInt(row.children[0].value);
+    const amount = parseFloat(row.children[1].value) || 0;
+    if (!isNaN(amount)) {
+      repaymentData[weekIndex] += amount;
+      totalRepayment += amount;
+    }
+  });
+
+  let cashflow = [];
+  let lowestWeek = { value: Infinity, label: '' };
+
+  for (let i = 0; i < weekOptions.length; i++) {
+    base -= repaymentData[i];
+    cashflow.push(base);
+
+    if (base < lowestWeek.value) {
+      lowestWeek.value = base;
+      lowestWeek.label = weekOptions[i].label;
+    }
+  }
+
+  document.getElementById('remaining').textContent = `Remaining: €${base.toLocaleString()}`;
+  document.getElementById('totalRepaid').textContent = `€${totalRepayment.toLocaleString()}`;
+  document.getElementById('finalBalance').textContent = `€${base.toLocaleString()}`;
+  document.getElementById('lowestWeek').textContent = lowestWeek.label;
+
+  updateChart(cashflow);
+}
+
+function renderInitialChart() {
+  const ctx = document.getElementById('chartCanvas').getContext('2d');
+  if (chart) chart.destroy();
+
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: weekOptions.map(w => w.label),
+      datasets: [{
+        label: 'Cash Balance Forecast',
+        data: Array(weekOptions.length).fill(355000),
+        borderColor: '#0077cc',
+        backgroundColor: 'rgba(0, 119, 204, 0.1)',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true
         }
-    });
-
-    updateSummary();
-    renderChart();
-}
-
-function updateSummary(weeks, sheetData) {
-    const totals = sheetData.map(row => {
-        return row.slice(2).reduce((a, b) => a + (parseFloat(b) || 0), 0);
-    });
-
-    const baseTotal = totals.reduce((a, b) => a + b, 0);
-    const totalRepayments = repayments.reduce((a, r) => a + r.amount, 0);
-
-    const finalBalance = baseTotal - totalRepayments;
-    const lowestWeek = getLowestWeek(totals);
-
-    document.getElementById('totalRepaid').textContent = `€${totalRepayments.toLocaleString()}`;
-    document.getElementById('finalBalance').textContent = `€${finalBalance.toLocaleString()}`;
-    document.getElementById('lowestWeek').textContent = lowestWeek;
-    document.getElementById('remaining').textContent = `Remaining: €${finalBalance.toLocaleString()}`;
-}
-
-function getLowestWeek(totals) {
-    let min = Math.min(...totals);
-    let index = totals.indexOf(min);
-    return `Week ${index + 1}: Cashflow Forecast`;
-}
-
-function renderChart(weeks, sheetData) {
-    if (!weeks) weeks = Array.from(document.querySelector('.repayment-row select').options).map(o => o.textContent);
-    if (!sheetData) sheetData = data;
-
-    const totals = sheetData.map(row => {
-        return row.slice(2).reduce((a, b) => a + (parseFloat(b) || 0), 0);
-    });
-
-    repayments.forEach(rep => {
-        if (rep.weekIndex < totals.length) {
-            totals[rep.weekIndex] -= rep.amount;
+      },
+      scales: {
+        y: {
+          beginAtZero: false
         }
-    });
-
-    const ctx = document.getElementById('chartCanvas').getContext('2d');
-    if (chart) chart.destroy();
-
-    chart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: weeks,
-            datasets: [{
-                label: 'Cash Balance Forecast',
-                data: totals,
-                fill: false,
-                borderColor: 'blue',
-                tension: 0.1,
-                pointRadius: 4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false
-        }
-    });
+      }
+    }
+  });
 }
 
-// Event wiring
-document.getElementById('addRepaymentBtn').addEventListener('click', () => {
-    const weeks = Array.from(document.querySelector('.repayment-row select').options).map(o => o.textContent);
-    addRepaymentRow(weeks);
-});
-
-document.getElementById('applyRepaymentsBtn').addEventListener('click', applyRepayments);
+function updateChart(data) {
+  if (!chart) return;
+  chart.data.datasets[0].data = data;
+  chart.update();
+}
