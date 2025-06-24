@@ -24,7 +24,7 @@ function handleFile(e) {
 
 function addRepaymentRow() {
   if (!headers.length) {
-    alert("Please upload a valid Excel file before adding a repayment.");
+    alert("Upload an Excel file first to enable repayment entry.");
     return;
   }
 
@@ -36,27 +36,7 @@ function addRepaymentRow() {
   sel.className = "weekSelect";
 
   headers.forEach((h, i) => {
-    if (typeof h === "string" && h.toLowerCase().includes("week")) {
-      const opt = document.createElement("option");
-      opt.value = i;
-      opt.textContent = h;
-      sel.appendChild(opt);
-    }
-  });
-
-  const inp = document.createElement("input");
-  inp.type = "number";
-  inp.placeholder = "Amount €";
-
-  div.appendChild(sel);
-  div.appendChild(inp);
-  container.appendChild(div);
-}
-
-  const sel = document.createElement("select");
-  sel.className = "weekSelect";
-  headers.forEach((h, i) => {
-    if (typeof h === "string" && h.toLowerCase().includes("week")) {
+    if (typeof h === "string" && /week/i.test(h)) {
       const opt = document.createElement("option");
       opt.value = i;
       opt.textContent = h;
@@ -127,7 +107,7 @@ function updateSummary() {
   const final = vals[vals.length - 1];
   document.getElementById("totalRepaid").textContent = `€${(originalBalance - remaining).toLocaleString()}`;
   document.getElementById("finalBalance").textContent = `€${final.toLocaleString()}`;
-  document.getElementById("minWeek").textContent = `${headers[vals.indexOf(min) + 1]}`;
+  document.getElementById("minWeek").textContent = `${headers[vals.indexOf(min) + 1] ?? '–'}`;
 }
 
 function renderTable() {
