@@ -23,18 +23,13 @@ function handleFile(e) {
 }
 
 function addRepaymentRow() {
-  if (!headers.length) {
-    alert("Upload an Excel file first to enable repayment entry.");
-    return;
-  }
-
+  if (!headers.length) { alert("Please upload your Excel file first."); return; }
   const container = document.getElementById("repayments");
   const div = document.createElement("div");
   div.className = "repayment-row";
 
   const sel = document.createElement("select");
   sel.className = "weekSelect";
-
   headers.forEach((h, i) => {
     if (typeof h === "string" && /week/i.test(h)) {
       const opt = document.createElement("option");
@@ -45,11 +40,9 @@ function addRepaymentRow() {
   });
 
   const inp = document.createElement("input");
-  inp.type = "number";
-  inp.placeholder = "Amount €";
+  inp.type = "number"; inp.placeholder = "Amount €";
 
-  div.appendChild(sel);
-  div.appendChild(inp);
+  div.append(sel, inp);
   container.appendChild(div);
 }
 
@@ -74,9 +67,7 @@ function applyRepayments() {
 
 function findOrCreateLabel(label) {
   let idx = data.findIndex(r => r[0] === label);
-  if (idx < 0) {
-    idx = data.push([label]) - 1;
-  }
+  if (idx < 0) idx = data.push([label]) - 1;
   return idx;
 }
 
@@ -87,9 +78,7 @@ function updateCashflow() {
 
   for (let c = 1; c < headers.length; c++) {
     let sum = 0;
-    for (let r = 0; r < iIdx; r++) {
-      sum += +(data[r][c] || 0);
-    }
+    for (let r = 0; r < iIdx; r++) sum += +(data[r][c] || 0);
     data[iIdx][c] = sum;
     const prev = +(data[bIdx][c - 1] || 0);
     data[bIdx][c] = prev + sum;
@@ -107,12 +96,12 @@ function updateSummary() {
   const final = vals[vals.length - 1];
   document.getElementById("totalRepaid").textContent = `€${(originalBalance - remaining).toLocaleString()}`;
   document.getElementById("finalBalance").textContent = `€${final.toLocaleString()}`;
-  document.getElementById("minWeek").textContent = `${headers[vals.indexOf(min) + 1] ?? '–'}`;
+  document.getElementById("minWeek").textContent = `${headers[vals.indexOf(min) + 1] || '–'}`;
 }
 
 function renderTable() {
-  const container = document.getElementById("tableContainer");
-  container.innerHTML = "";
+  const c = document.getElementById("tableContainer");
+  c.innerHTML = "";
   if (!fullTableVisible) return;
   const tbl = document.createElement("table");
   const hdr = tbl.createTHead().insertRow();
@@ -127,7 +116,7 @@ function renderTable() {
       if (typeof val === "number" && val < 0) td.classList.add("highlight");
     });
   });
-  container.appendChild(tbl);
+  c.appendChild(tbl);
 }
 
 function updateChart() {
@@ -138,26 +127,8 @@ function updateChart() {
   if (chart) chart.destroy();
   chart = new Chart(ctx, {
     type: "line",
-    data: {
-      labels: labs,
-      datasets: [{
-        label: "Cash Balance Forecast",
-        data: vals,
-        borderColor: "#0077cc",
-        fill: false,
-        tension: 0.2,
-        pointRadius: 3,
-        pointBackgroundColor: "#0077cc"
-      }]
-    },
-    options: {
-      responsive: true,
-      scales: {
-        y: {
-          beginAtZero: false
-        }
-      }
-    }
+    data: { labels: labs, datasets: [{ label: "Cash Balance Forecast", data: vals, borderColor: "#0077cc", fill: false, tension: 0.2 }] },
+    options: { responsive: true, scales: { y: { beginAtZero: false } } }
   });
 }
 
