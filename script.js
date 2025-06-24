@@ -73,15 +73,32 @@ function renderTable() {
 function addRepayment() {
   const div = document.createElement("div");
   div.classList.add("repayment-row");
+
   const select = document.createElement("select");
   select.classList.add("weekSelect");
+
   const input = document.createElement("input");
   input.type = "number";
-  populateDropdowns();
+
   div.appendChild(select);
   div.appendChild(input);
   document.getElementById("repayments").appendChild(div);
-  populateDropdowns(); // fix reset bug
+
+ function populateDropdown(targetSelect = null) {
+  const options = headers.map((header, index) => {
+    if (typeof header === "string" && header.toLowerCase().includes("week")) {
+      return `<option value="${index}">${header}</option>`;
+    }
+    return '';
+  }).join("");
+
+  if (targetSelect) {
+    targetSelect.innerHTML = options;
+  } else {
+    document.querySelectorAll("select.weekSelect").forEach(select => {
+      select.innerHTML = options;
+    });
+  }
 }
 
 function applyRepayments() {
