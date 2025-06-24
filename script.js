@@ -1,146 +1,133 @@
-let data = [], headers = [];
-let originalBalance = 355000, remaining = originalBalance, chart;
-let fullTableVisible = true;
-
-const repaymentLabel = "Mayweather Investment Repayment (Investment 1 and 2)";
-const incomeLabel = "Weekly income / cash position";
-const balanceLabel = "Rolling cash balance";
-
-document.getElementById("fileInput").addEventListener("change", handleFile);
+let weekLabels = [];
+let repayments = [];
 
 function handleFile(e) {
-  const reader = new FileReader();
-  reader.onload = evt => {
-    const wb = XLSX.read(evt.target.result, { type: "binary" });
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const raw = XLSX.utils.sheet_to_json(ws, { header: 1 });
-    headers = raw.shift();
-    data = raw;
-    renderTable();
-    updateChart();
-  };
-  reader.readAsBinaryString(e.target.files[0]);
+    const file = e.target.files[0];
+    if (!file) return alert("No file selected.");
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+        if (!json || json.length === 0) {
+            alert("Error reading Excel file.");
+            return;
+        }
+
+        // Example: Extract week labels from first row
+        const headerRow = json[0];
+        weekLabels = headerRow.slice(2).filter(Boolean); // Adjust start index if needed
+
+        console.log("Extracted week labels:", weekLabels);
+        if (weekLabels.length === 0) {
+            alert("No week labels found in the file. Check column headers.");
+        }
+
+        // Update week dropdown in all rows
+        populateWeekDropdowns();
+
+        // Trigger rendering
+        renderForecast(json);
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+function populateWeekDropdowns() {
+    document.querySelectorAll('.repayment-row select').forEach(select => {
+        select.innerHTML = '';
+        weekLabels.forEach(week => {
+            const option = document.createElement('option');
+            option.value = week;
+            option.textContent = week;
+            select.appendChild(option);
+        });
+    });
 }
 
 function addRepaymentRow() {
-  if (!headers.length) { alert("Please upload your Excel file first."); return; }
-  const container = document.getElementById("repayments");
-  const div = document.createElement("div");
-  div.className = "repayment-row";
+    const container = document.querySelector('.repayment-container');
+    const row = document.createElement('div');
+    row.className = 'repayment-row';
 
-  const sel = document.createElement("select");
-  sel.className = "weekSelect";
-  headers.forEach((h, i) => {
-    if (typeof h === "string" && /week/i.test(h)) {
-      const opt = document.createElement("option");
-      opt.value = i;
-      opt.textContent = h;
-      sel.appendChild(opt);
-    }
-  });
+    const select = document.createElement('select');
+    weekLabels.forEach(week => {
+        const option = document.createElement('option');
+        option.value = week;
+        option.textContent = week;
+        select.appendChild(option);
+    });
 
-  const inp = document.createElement("input");
-  inp.type = "number"; inp.placeholder = "Amount €";
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.placeholder = 'Amount €';
 
-  div.append(sel, inp);
-  container.appendChild(div);
+    row.appendChild(select);
+    row.appendChild(input);
+    container.appendChild(row);
 }
 
 function applyRepayments() {
-  remaining = originalBalance;
-  const rIdx = findOrCreateLabel(repaymentLabel);
-  data[rIdx] = data[rIdx] || [];
-
-  document.querySelectorAll(".repayment-row").forEach(r => {
-    const col = +r.querySelector("select").value;
-    let val = +r.querySelector("input").value;
-    if (!isNaN(val)) {
-      val = -Math.abs(val);
-      data[rIdx][col] = (+(data[rIdx][col] || 0)) + val;
-      remaining -= Math.abs(val);
-    }
-  });
-
-  updateCashflow();
-  renderTable();
-}
-
-function findOrCreateLabel(label) {
-  let idx = data.findIndex(r => r[0] === label);
-  if (idx < 0) idx = data.push([label]) - 1;
-  return idx;
-}
-
-function updateCashflow() {
-  const iIdx = findOrCreateLabel(incomeLabel);
-  const bIdx = findOrCreateLabel(balanceLabel);
-  data[bIdx] = [balanceLabel];
-
-  for (let c = 1; c < headers.length; c++) {
-    let sum = 0;
-    for (let r = 0; r < iIdx; r++) sum += +(data[r][c] || 0);
-    data[iIdx][c] = sum;
-    const prev = +(data[bIdx][c - 1] || 0);
-    data[bIdx][c] = prev + sum;
-  }
-
-  updateSummary();
-  updateChart();
-}
-
-function updateSummary() {
-  document.getElementById("remaining").textContent = `€${remaining.toLocaleString()}`;
-  const bIdx = findOrCreateLabel(balanceLabel);
-  const vals = data[bIdx].slice(1).map(n => +n);
-  const min = Math.min(...vals);
-  const final = vals[vals.length - 1];
-  document.getElementById("totalRepaid").textContent = `€${(originalBalance - remaining).toLocaleString()}`;
-  document.getElementById("finalBalance").textContent = `€${final.toLocaleString()}`;
-  document.getElementById("minWeek").textContent = `${headers[vals.indexOf(min) + 1] || '–'}`;
-}
-
-function renderTable() {
-  const c = document.getElementById("tableContainer");
-  c.innerHTML = "";
-  if (!fullTableVisible) return;
-  const tbl = document.createElement("table");
-  const hdr = tbl.createTHead().insertRow();
-  headers.forEach(h => hdr.appendChild(Object.assign(document.createElement("th"), { textContent: h })));
-  const body = tbl.createTBody();
-  data.forEach(r => {
-    const row = body.insertRow();
-    headers.forEach((_, i) => {
-      const td = row.insertCell();
-      const val = r[i] ?? "";
-      td.textContent = val;
-      if (typeof val === "number" && val < 0) td.classList.add("highlight");
+    repayments = [];
+    const rows = document.querySelectorAll('.repayment-row');
+    rows.forEach(row => {
+        const week = row.querySelector('select')?.value;
+        const amount = parseFloat(row.querySelector('input')?.value || 0);
+        if (week && amount > 0) {
+            repayments.push({ week, amount });
+        }
     });
-  });
-  c.appendChild(tbl);
+
+    updateRepaymentSummary();
+    renderForecast(); // Re-render with repayments
 }
 
-function updateChart() {
-  const bIdx = findOrCreateLabel(balanceLabel);
-  const vals = data[bIdx].slice(1).map(n => +n);
-  const labs = headers.slice(1);
-  const ctx = document.getElementById("chartCanvas").getContext("2d");
-  if (chart) chart.destroy();
-  chart = new Chart(ctx, {
-    type: "line",
-    data: { labels: labs, datasets: [{ label: "Cash Balance Forecast", data: vals, borderColor: "#0077cc", fill: false, tension: 0.2 }] },
-    options: { responsive: true, scales: { y: { beginAtZero: false } } }
-  });
+function updateRepaymentSummary() {
+    const total = repayments.reduce((sum, r) => sum + r.amount, 0);
+    document.getElementById('totalRepaid').textContent = `€${total.toLocaleString()}`;
 }
 
-function toggleFullTable() {
-  fullTableVisible = !fullTableVisible;
-  renderTable();
+function renderForecast(parsedData = null) {
+    const ctx = document.getElementById('chartCanvas').getContext('2d');
+    const labels = weekLabels;
+    const balances = Array(labels.length).fill(0);
+
+    repayments.forEach(r => {
+        const idx = labels.indexOf(r.week);
+        if (idx >= 0) balances[idx] -= r.amount;
+    });
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: "Cash Balance Forecast",
+                data: balances,
+                borderColor: '#007bff',
+                backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                fill: true,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: true }
+            },
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+
+    const finalBalance = balances.reduce((a, b) => a + b, 0);
+    document.getElementById('finalBalance').textContent = `€${finalBalance.toLocaleString()}`;
 }
 
-function exportFile() {
-  const out = [headers, ...data];
-  const ws = XLSX.utils.aoa_to_sheet(out);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
-  XLSX.writeFile(wb, "CashflowUpdated.xlsx");
-}
+document.getElementById('fileInput').addEventListener('change', handleFile);
+document.getElementById('addRepaymentBtn').addEventListener('click', addRepaymentRow);
+document.getElementById('applyRepaymentsBtn').addEventListener('click', applyRepayments);
