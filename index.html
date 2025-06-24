@@ -4,38 +4,33 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Cashflow Forecast Tool</title>
-  <link rel="stylesheet" href="style.css?v=123" />
+  <link rel="stylesheet" href="style.css?v=4" />
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <div class="container">
-    <h1>📉 <span style="color:#007bff;">Cashflow Forecast Tool</span></h1>
+    <h1>📉 Cashflow Forecast Tool</h1>
 
     <input type="file" id="fileInput" accept=".xlsx" />
-    <p><strong>Remaining:</strong> <span id="remaining">€355,000</span></p>
+    <p id="remaining"><strong>Remaining:</strong> €355,000</p>
 
     <div class="repayment-controls">
       <button id="addRepaymentBtn">➕ Add Repayment</button>
       <button id="applyRepaymentsBtn">✅ Apply Repayments</button>
-      <button onclick="exportTableToExcel()">📁 Export</button>
-      <button onclick="toggleTable()">📋 Toggle Full Table</button>
     </div>
 
-    <div class="repayment-container">
-      <!-- Repayment rows added here -->
+    <div id="repaymentContainer" class="repayment-container"></div>
+
+    <div class="summary">
+      <div><strong>Total Repaid:</strong> <span id="totalRepaid">€0</span></div>
+      <div><strong>Final Balance:</strong> <span id="finalBalance">€0</span></div>
+      <div><strong>Lowest Week:</strong> <span id="lowestWeek">–</span></div>
     </div>
 
-    <div class="summary-cards">
-      <div class="card"><strong>Total Repaid:</strong> <span id="totalRepaid">€0</span></div>
-      <div class="card"><strong>Final Balance:</strong> <span id="finalBalance">€0</span></div>
-      <div class="card"><strong>Lowest Week:</strong> <span id="lowestWeek">–</span></div>
-    </div>
-
-    <canvas id="chartCanvas" height="100"></canvas>
-    <div id="tableContainer" style="display: none;"></div>
+    <canvas id="chartCanvas" height="120"></canvas>
   </div>
 
-  <script src="script.js?v=123"></script>
+  <script src="script.js?v=4"></script>
 </body>
 </html>
