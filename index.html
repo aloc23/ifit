@@ -2,35 +2,35 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Cashflow Forecast Tool</title>
-  <link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>📉 Cashflow Forecast Tool</title>
+  <link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
-  <div class="container">
-    <h1>📉 <span>Cashflow Forecast Tool</span></h1>
-    <input type="file" id="fileInput" />
-    <p><strong>Remaining:</strong> <span id="remaining">€0</span></p>
+  <h1>📉 <span>Cashflow Forecast Tool</span></h1>
+  <input type="file" id="fileInput" />
+  <p><strong>Remaining:</strong> <span id="remaining">€0</span></p>
 
-    <div class="controls">
-      <button id="addRepaymentBtn">➕ Add Repayment</button>
-      <button id="applyRepaymentsBtn">✅ Apply Repayments</button>
-    </div>
-
-    <div id="repaymentInputs"></div>
-
-    <div class="summary">
-      <div><strong>Total Repaid:</strong> <span id="totalRepaid">€0</span></div>
-      <div><strong>Final Balance:</strong> <span id="finalBalance">€0</span></div>
-      <div><strong>Lowest Week:</strong> <span id="lowestWeek">–</span></div>
-    </div>
-
-    <div id="chartContainer">
-      <canvas id="chartCanvas" width="800" height="400"></canvas>
-    </div>
+  <div class="button-row">
+    <button id="addRow">➕ Add Repayment</button>
+    <button id="applyRepayments">✅ Apply Repayments</button>
+    <button id="exportBtn">📁 Export</button>
+    <button id="toggleTable">📋 Toggle Full Table</button>
   </div>
 
-  <script src="script.js?v=5"></script>
+  <div id="repaymentContainer"></div>
+
+  <div class="summary">
+    <div><strong>Total Repaid:</strong> <span id="totalRepaid">€0</span></div>
+    <div><strong>Final Balance:</strong> <span id="finalBalance">€0</span></div>
+    <div><strong>Lowest Week:</strong> <span id="lowestWeek">–</span></div>
+  </div>
+
+  <canvas id="chartCanvas"></canvas>
+  <div id="tableContainer" style="display:none;"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="script.js?v=3"></script>
 </body>
 </html>
