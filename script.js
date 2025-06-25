@@ -140,4 +140,12 @@ function renderTable() {
 
 document.getElementById('toggleTable').addEventListener('click', () => {
   document.getElementById('tableContainer').classList.toggle('hidden');
+  document.addEventListener('DOMContentLoaded', () => {
+  if (sheetData?.length > 0) {
+    initializeData();
+    renderTable();
+    renderChart();
+    populateWeekDropdowns();
+  }
+});
 });
