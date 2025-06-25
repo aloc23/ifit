@@ -2,29 +2,35 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Cashflow Forecast Tool</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="style.css?v=4" />
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <div class="container">
-    <h1>📉 Cashflow Forecast Tool</h1>
-    <input type="file" id="fileInput" accept=".xlsx" />
-    <p><strong id="remaining">Remaining: €355,000</strong></p>
-    <div class="repayment-controls">
-      <button id="addRepayment">➕ Add Repayment</button>
-      <button id="applyRepayments">✅ Apply Repayments</button>
+    <h1>📉 <span>Cashflow Forecast Tool</span></h1>
+    <input type="file" id="fileInput" />
+    <p><strong>Remaining:</strong> <span id="remaining">€0</span></p>
+
+    <div class="controls">
+      <button id="addRepaymentBtn">➕ Add Repayment</button>
+      <button id="applyRepaymentsBtn">✅ Apply Repayments</button>
     </div>
-    <div id="repaymentInputs" class="repayment-container"></div>
+
+    <div id="repaymentInputs"></div>
+
     <div class="summary">
       <div><strong>Total Repaid:</strong> <span id="totalRepaid">€0</span></div>
       <div><strong>Final Balance:</strong> <span id="finalBalance">€0</span></div>
       <div><strong>Lowest Week:</strong> <span id="lowestWeek">–</span></div>
     </div>
-    <canvas id="chartCanvas" height="120"></canvas>
+
+    <div id="chartContainer">
+      <canvas id="chartCanvas" width="800" height="400"></canvas>
+    </div>
   </div>
-  <script src="script.js?v=4"></script>
+
+  <script src="script.js?v=5"></script>
 </body>
 </html>
