@@ -19,7 +19,34 @@ function handleFile(event) {
     weekOptions = weekLabels;
 
     // Display dropdowns
-    updateDropdowns();
+  function updateDropdowns() {
+  const container = document.getElementById("repaymentContainer");
+  container.innerHTML = ''; // Clear previous entries
+  addRepaymentRow();
+}
+
+function addRepaymentRow() {
+  const container = document.getElementById("repaymentContainer");
+
+  const row = document.createElement("div");
+  row.classList.add("repaymentRow");
+
+  const select = document.createElement("select");
+  weekOptions.forEach((week, index) => {
+    const option = document.createElement("option");
+    option.value = week;
+    option.textContent = week;
+    select.appendChild(option);
+  });
+
+  const input = document.createElement("input");
+  input.type = "number";
+  input.placeholder = "Amount €";
+
+  row.appendChild(select);
+  row.appendChild(input);
+  container.appendChild(row);
+}
 
     // Find "Weekly income / cash position" and "Rolling Cash Balance"
     const weeklyRow = json.find(row => row[1] && typeof row[1] === 'string' && row[1].toLowerCase().includes("weekly income"));
