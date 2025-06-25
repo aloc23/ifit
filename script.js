@@ -1,133 +1,109 @@
-let rawData = [];
-let chart;
-let weekOptions = [];
+let chart = null;
+let weeks = [];
+let balances = [];
+let remaining = 0;
 
-document.getElementById('fileInput').addEventListener('change', handleFile);
-document.getElementById('addRepayment').addEventListener('click', addRepaymentRow);
-document.getElementById('applyRepayments').addEventListener('click', applyRepayments);
+document.getElementById("fileInput").addEventListener("change", handleFileUpload);
+document.getElementById("addRepaymentBtn").addEventListener("click", addRepaymentRow);
+document.getElementById("applyRepaymentsBtn").addEventListener("click", applyRepayments);
 
-function handleFile(event) {
-  const reader = new FileReader();
-  reader.onload = function (e) {
-    const data = new Uint8Array(e.target.result);
-    const workbook = XLSX.read(data, { type: 'array' });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+function handleFileUpload(e) {
+  // Fake initial data — replace with XLSX read logic
+  weeks = Array.from({ length: 52 }, (_, i) => `Week ${i + 1}`);
+  balances = weeks.map((_, i) => 355000 - i * 1000);
+  remaining = 355000;
 
-    rawData = json;
-    extractWeekOptions(json);
-    renderInitialChart();
-  };
-  reader.readAsArrayBuffer(event.target.files[0]);
+  updateSummary();
+  renderChart();
+  populateDropdowns();
 }
 
-function extractWeekOptions(data) {
-  const weeksRow = data[3] || [];
-  const labelsRow = data[2] || [];
-
-  weekOptions = weeksRow.map((weekLabel, i) => {
-    const label = typeof weekLabel === 'string' ? weekLabel.trim() : '';
-    if (label.toLowerCase().includes('week')) {
-      return { index: i, label: label };
-    }
-    return null;
-  }).filter(Boolean);
+function updateSummary() {
+  document.getElementById("remaining").textContent = formatEUR(remaining);
+  document.getElementById("finalBalance").textContent = formatEUR(balances[balances.length - 1]);
+  const lowest = Math.min(...balances);
+  const lowestIndex = balances.indexOf(lowest);
+  document.getElementById("lowestWeek").textContent = `${weeks[lowestIndex]}`;
 }
 
-function addRepaymentRow() {
-  const container = document.getElementById('repaymentInputs');
-  const row = document.createElement('div');
-  row.className = 'repayment-row';
-
-  const weekSelect = document.createElement('select');
-  weekOptions.forEach(week => {
-    const option = document.createElement('option');
-    option.value = week.index;
-    option.textContent = week.label;
-    weekSelect.appendChild(option);
-  });
-
-  const amountInput = document.createElement('input');
-  amountInput.type = 'number';
-  amountInput.placeholder = 'Amount €';
-
-  row.appendChild(weekSelect);
-  row.appendChild(amountInput);
-  container.appendChild(row);
-}
-
-function applyRepayments() {
-  if (weekOptions.length === 0 || rawData.length === 0) return;
-
-  let base = 355000;
-  let repaymentData = Array(weekOptions.length).fill(0);
-  let totalRepayment = 0;
-
-  document.querySelectorAll('.repayment-row').forEach(row => {
-    const weekIndex = parseInt(row.children[0].value);
-    const amount = parseFloat(row.children[1].value) || 0;
-    if (!isNaN(amount)) {
-      repaymentData[weekIndex] += amount;
-      totalRepayment += amount;
-    }
-  });
-
-  let cashflow = [];
-  let lowestWeek = { value: Infinity, label: '' };
-
-  for (let i = 0; i < weekOptions.length; i++) {
-    base -= repaymentData[i];
-    cashflow.push(base);
-
-    if (base < lowestWeek.value) {
-      lowestWeek.value = base;
-      lowestWeek.label = weekOptions[i].label;
-    }
-  }
-
-  document.getElementById('remaining').textContent = `Remaining: €${base.toLocaleString()}`;
-  document.getElementById('totalRepaid').textContent = `€${totalRepayment.toLocaleString()}`;
-  document.getElementById('finalBalance').textContent = `€${base.toLocaleString()}`;
-  document.getElementById('lowestWeek').textContent = lowestWeek.label;
-
-  updateChart(cashflow);
-}
-
-function renderInitialChart() {
-  const ctx = document.getElementById('chartCanvas').getContext('2d');
+function renderChart() {
+  const ctx = document.getElementById("chartCanvas").getContext("2d");
   if (chart) chart.destroy();
 
   chart = new Chart(ctx, {
-    type: 'line',
+    type: "line",
     data: {
-      labels: weekOptions.map(w => w.label),
+      labels: weeks,
       datasets: [{
-        label: 'Cash Balance Forecast',
-        data: Array(weekOptions.length).fill(355000),
-        borderColor: '#0077cc',
-        backgroundColor: 'rgba(0, 119, 204, 0.1)',
-        borderWidth: 2
+        label: "Cash Balance Forecast",
+        data: balances,
+        borderColor: "#007bff",
+        backgroundColor: "rgba(0, 123, 255, 0.1)",
+        fill: true,
+        tension: 0.2
       }]
     },
     options: {
       responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: true
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: false
-        }
-      }
+      maintainAspectRatio: false
     }
   });
 }
 
-function updateChart(data) {
-  if (!chart) return;
-  chart.data.datasets[0].data = data;
-  chart.update();
+function addRepaymentRow() {
+  const container = document.getElementById("repaymentInputs");
+  const row = document.createElement("div");
+
+  const select = document.createElement("select");
+  weeks.forEach((week, idx) => {
+    const opt = document.createElement("option");
+    opt.value = idx;
+    opt.textContent = week;
+    select.appendChild(opt);
+  });
+
+  const input = document.createElement("input");
+  input.type = "number";
+  input.placeholder = "Amount €";
+
+  row.appendChild(select);
+  row.appendChild(input);
+  container.appendChild(row);
+}
+
+function applyRepayments() {
+  const rows = document.getElementById("repaymentInputs").querySelectorAll("div");
+  let totalRepay = 0;
+  const adjustments = new Array(balances.length).fill(0);
+
+  rows.forEach(row => {
+    const weekIndex = +row.querySelector("select").value;
+    const amount = parseFloat(row.querySelector("input").value) || 0;
+    adjustments[weekIndex] += amount;
+    totalRepay += amount;
+  });
+
+  balances = balances.map((bal, i) => bal - adjustments[i]);
+  remaining -= totalRepay;
+
+  document.getElementById("totalRepaid").textContent = formatEUR(totalRepay);
+  updateSummary();
+  renderChart();
+}
+
+function populateDropdowns() {
+  const selects = document.querySelectorAll("#repaymentInputs select");
+  selects.forEach(select => {
+    select.innerHTML = "";
+    weeks.forEach((week, idx) => {
+      const opt = document.createElement("option");
+      opt.value = idx;
+      opt.textContent = week;
+      select.appendChild(opt);
+    });
+  });
+}
+
+function formatEUR(num) {
+  return "€" + num.toLocaleString("en-IE");
 }
