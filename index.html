@@ -3,37 +3,31 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>📉 Cashflow Forecast Tool</title>
+  <title>💰 Cashflow Forecast Tool</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>📉 Cashflow Forecast Tool</h1>
+  <h1>💰 Cashflow Forecast Tool</h1>
 
   <input type="file" id="fileInput" />
   <div id="fileName"></div>
-  <p><strong>Remaining:</strong> <span id="remaining">€0</span></p>
 
   <div id="controls">
-    <button id="addRepaymentBtn">➕ Add Repayment</button>
-    <button id="applyRepaymentsBtn">✅ Apply Repayments</button>
-    <button id="toggleTableBtn">📋 Toggle Full Table</button>
+    <button id="addRowBtn">➕ Add Repayment</button>
+    <button id="applyBtn">✅ Apply Repayments</button>
   </div>
 
-  <div id="repaymentContainer"></div>
-
-  <div class="summary">
-    <div>Total Repaid: <strong><span id="totalRepaid">€0</span></strong></div>
-    <div>Final Balance: <strong><span id="finalBalance">€0</span></strong></div>
-    <div>Lowest Week: <strong><span id="lowestWeek">–</span></strong></div>
+  <div id="summary">
+    <p>Total Repaid: <strong><span id="totalRepaid">€0</span></strong></p>
+    <p>Final Balance: <strong><span id="finalBalance">€0</span></strong></p>
+    <p>Lowest Week: <strong><span id="lowestWeek">–</span></strong></p>
+    <p>Remaining: <strong><span id="remaining">€0</span></strong></p>
   </div>
 
   <canvas id="chartCanvas" width="900" height="400"></canvas>
 
-  <div id="tableWrapper" style="display:none; max-height: 300px; overflow: auto;">
-    <table id="dataTable"></table>
-  </div>
-
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="script.js?v=15"></script>
+  <script src="script.js?v=99"></script>
 </body>
 </html>
