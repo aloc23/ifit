@@ -17,17 +17,27 @@ function initializeData() {
   originalCash = [...rollingCash];
 }
 
-document.getElementById('addRepayment').addEventListener('click', () => {
-  const container = document.getElementById('repaymentInputs');
-  const row = document.createElement('div');
+let repayments = [];
 
-  const select = document.createElement('select');
-  weekLabels.forEach((label, i) => {
-    const option = document.createElement('option');
-    option.value = i;
-    option.textContent = label;
-    select.appendChild(option);
-  });
+function addRepaymentRow() {
+  // This should append a new dropdown + input pair to the form
+  const container = document.getElementById('repaymentContainer');
+  const row = document.createElement('div');
+  row.classList.add('repayment-row');
+  row.innerHTML = `
+    <select class="week-select"></select>
+    <input type="number" class="week-amount" placeholder="Amount €" />
+  `;
+  container.appendChild(row);
+
+  populateWeekDropdown(row.querySelector('.week-select'));
+}
+
+function populateWeekDropdown(selectElement) {
+  selectElement.innerHTML = weekLabels.map(label => `
+    <option value="${label}">${label}</option>`
+  ).join('');
+}
 
   const input = document.createElement('input');
   input.type = 'number';
