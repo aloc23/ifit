@@ -13,10 +13,7 @@ function parseSheet() {
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   sheetData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-  // Extract week labels (row 4)
   weekLabels = sheetData[3].slice(3).map((w, i) => `Week ${i + 1} = ${w}`);
-
-  // Find Rolling Cash row
   const rollingRow = sheetData.find(r => r[0]?.toString().toLowerCase().includes('rolling cash balance'));
   rollingCash = rollingRow.slice(3).map(c => parseFloat(c) || 0);
   originalCash = [...rollingCash];
@@ -55,6 +52,11 @@ document.getElementById('applyRepayments').addEventListener('click', () => {
     totalRepaid += amount;
   });
 
+  // Recalculate cumulative cash
+  for (let i = 1; i < rollingCash.length; i++) {
+    rollingCash[i] += rollingCash[i - 1] - originalCash[i - 1];
+  }
+
   updateChart();
   updateSummary(totalRepaid);
 });
@@ -66,9 +68,9 @@ function updateSummary(totalRepaid) {
   const minIndex = rollingCash.indexOf(min);
 
   document.getElementById('totalRepaid').textContent = `€${totalRepaid.toLocaleString()}`;
+  document.getElementById('remainingBalance').textContent = `€${remaining.toLocaleString()}`;
   document.getElementById('finalBalance').textContent = `€${final.toLocaleString()}`;
   document.getElementById('lowestWeek').textContent = weekLabels[minIndex] || '–';
-  document.getElementById('remainingBalance').textContent = `€${remaining.toLocaleString()}`;
 }
 
 function renderTable() {
@@ -143,6 +145,3 @@ document.getElementById('toggleFullTable').addEventListener('click', () => {
   const container = document.getElementById('tableContainer');
   container.classList.toggle('hidden');
 });
-document.getElementById("fileInput").addEventListener("change", handleFile);
-document.getElementById("addRowBtn").addEventListener("click", addRepaymentRow);
-document.getElementById("applyBtn").addEventListener("click", applyRepayments);
