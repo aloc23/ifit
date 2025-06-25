@@ -1,68 +1,60 @@
 body {
   font-family: Arial, sans-serif;
+  background: #f5f5f5;
+  margin: 0;
   padding: 20px;
-  background: #f4f4f4;
 }
-
+.container {
+  max-width: 960px;
+  margin: auto;
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+}
 h1 {
-  color: #005fa3;
+  color: #0077cc;
 }
-
-button {
-  margin: 5px;
-  padding: 8px 16px;
-  background: #0077cc;
+.repayment-controls button {
+  background-color: #0077cc;
   color: white;
   border: none;
+  padding: 10px 14px;
+  margin: 5px;
   border-radius: 4px;
   cursor: pointer;
 }
-
-button:hover {
-  background: #005fa3;
+.repayment-controls button:hover {
+  background-color: #005fa3;
 }
-
-input, select {
-  padding: 6px;
-  margin: 5px;
-  font-size: 14px;
+.repayment-container {
+  margin: 1rem 0;
 }
-
-#repaymentInputs > div {
+.repayment-row {
   display: flex;
   gap: 10px;
   margin-bottom: 10px;
 }
-
-#summary {
-  background: #e3f2fd;
-  padding: 10px;
-  margin-top: 20px;
-  border-radius: 6px;
+.repayment-row select,
+.repayment-row input {
+  flex: 1;
+  padding: 6px;
+  font-size: 14px;
 }
-
+.summary {
+  margin-top: 20px;
+  display: flex;
+  gap: 20px;
+}
 canvas {
-  background: white;
-  border: 1px solid #ccc;
-  margin-top: 20px;
-}
-
-#tableContainer {
-  margin-top: 20px;
-  overflow-x: auto;
-}
-
-#tableContainer table {
+  margin-top: 2rem;
   width: 100%;
-  border-collapse: collapse;
+  height: 400px;
 }
-
-#tableContainer th, #tableContainer td {
-  padding: 4px 6px;
+#spreadsheetTable {
+  margin-top: 20px;
+  max-height: 300px;
+  overflow-y: auto;
+  background: white;
+  padding: 10px;
   border: 1px solid #ccc;
-  text-align: center;
-}
-
-.hidden {
-  display: none;
 }
