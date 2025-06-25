@@ -1,182 +1,158 @@
-let workbook, sheetData, weekLabels = [], rollingCash = [], originalCash = [], chart;
-let repayments = [];
+let rawData = [];
+let chart;
+let weekOptions = [];
 
-document.getElementById('excelFile').addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  const data = await file.arrayBuffer();
-  workbook = XLSX.read(data);
-  sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 });
-  initializeData();
-  renderTable();
-  renderChart();
-  populateWeekDropdowns();
-});
+document.getElementById('fileInput').addEventListener('change', handleFile);
+document.getElementById('addRepayment').addEventListener('click', addRepaymentRow);
+document.getElementById('applyRepayments').addEventListener('click', applyRepayments);
 
-function initializeData() {
-  if (!sheetData || sheetData.length < 4) {
-    console.error("❌ Excel data too short or not structured correctly.");
-    return;
-  }
+function handleFile(event) {
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    const data = new Uint8Array(e.target.result);
+    const workbook = XLSX.read(data, { type: 'array' });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-  console.log("✅ Sheet loaded. Checking row 3 and 4:");
-  console.log("Row 3:", sheetData[2]);
-  console.log("Row 4 (week labels):", sheetData[3]);
-
-  // Try to find a row with week labels — look for numeric values or "Week" strings
-  const candidateRow = sheetData.find(row =>
-    row.slice(3).some(cell => typeof cell === "string" && cell.toLowerCase().includes("week"))
-  );
-
-  if (!candidateRow) {
-    console.error("❌ No row found with valid week labels.");
-    return;
-  }
-
-  weekLabels = candidateRow.slice(3).map(label => label?.toString() || "");
-  console.log("📅 Week labels set:", weekLabels);
-
-  const rollingRow = sheetData.find(row =>
-    row[0]?.toString().toLowerCase().includes("rolling cash balance")
-  );
-
-  if (!rollingRow) {
-    console.error("❌ Could not find 'Rolling Cash Balance' row.");
-    return;
-  }
-
-  rollingCash = rollingRow.slice(3).map(cell => parseFloat(cell) || 0);
-  originalCash = [...rollingCash];
-  console.log("💶 Loaded cash series:", rollingCash.length);
+    rawData = json;
+    extractWeekOptions(json);
+    renderInitialChart();
+    renderTable();
+  };
+  reader.readAsArrayBuffer(event.target.files[0]);
 }
 
-function populateWeekDropdowns() {
-  document.getElementById('repaymentInputs').innerHTML = '';
-  addRepaymentRow(); // start with one
+function extractWeekOptions(data) {
+  const weeksRow = data[3] || [];
+  weekOptions = weeksRow.map((weekLabel, i) => {
+    const label = typeof weekLabel === 'string' ? weekLabel.trim() : '';
+    if (label.toLowerCase().includes('week') || label) {
+      return { index: i, label: label };
+    }
+    return null;
+  }).filter(Boolean);
 }
 
 function addRepaymentRow() {
   const container = document.getElementById('repaymentInputs');
   const row = document.createElement('div');
+  row.className = 'repayment-row';
 
-  const select = document.createElement('select');
-  weekLabels.forEach((label, idx) => {
+  const weekSelect = document.createElement('select');
+  weekOptions.forEach(week => {
     const option = document.createElement('option');
-    option.value = idx;
-    option.text = `Week ${idx + 1} = ${label}`;
-    select.appendChild(option);
+    option.value = week.index;
+    option.textContent = week.label;
+    weekSelect.appendChild(option);
   });
 
-  const input = document.createElement('input');
-  input.type = 'number';
-  input.placeholder = '€ Repayment';
+  const amountInput = document.createElement('input');
+  amountInput.type = 'number';
+  amountInput.placeholder = 'Amount €';
 
-  row.appendChild(select);
-  row.appendChild(input);
+  row.appendChild(weekSelect);
+  row.appendChild(amountInput);
   container.appendChild(row);
 }
 
-document.getElementById('addRepayment').addEventListener('click', addRepaymentRow);
+function applyRepayments() {
+  if (weekOptions.length === 0 || rawData.length === 0) return;
 
-document.getElementById('applyRepayments').addEventListener('click', () => {
-  if (!originalCash.length) return;
+  let base = 355000;
+  let repaymentData = Array(weekOptions.length).fill(0);
+  let totalRepayment = 0;
 
-  const rows = document.querySelectorAll('#repaymentInputs > div');
-  repayments = [];
-  let cash = [...originalCash];
-
-  rows.forEach(row => {
-    const week = parseInt(row.children[0].value);
+  document.querySelectorAll('.repayment-row').forEach(row => {
+    const weekIndex = parseInt(row.children[0].value);
     const amount = parseFloat(row.children[1].value) || 0;
-    if (!isNaN(amount) && week >= 0) {
-      repayments.push({ week, amount });
-      cash[week] = cash[week] - amount;
+    if (!isNaN(amount)) {
+      repaymentData[weekIndex] += amount;
+      totalRepayment += amount;
     }
   });
 
-  for (let i = 1; i < cash.length; i++) {
-    cash[i] = cash[i - 1] + (cash[i] - originalCash[i - 1]);
+  let cashflow = [];
+  let lowestWeek = { value: Infinity, label: '' };
+
+  for (let i = 0; i < weekOptions.length; i++) {
+    base -= repaymentData[i];
+    cashflow.push(base);
+
+    if (base < lowestWeek.value) {
+      lowestWeek.value = base;
+      lowestWeek.label = weekOptions[i].label;
+    }
   }
 
-  const totalRepaid = repayments.reduce((sum, r) => sum + r.amount, 0);
-  const remaining = 355000 - totalRepaid;
-  const finalBalance = cash[cash.length - 1] || 0;
-  const lowest = Math.min(...cash);
-  const lowestWeek = weekLabels[cash.indexOf(lowest)] || '–';
+  document.getElementById('remaining').textContent = `Remaining: €${(355000 - totalRepayment).toLocaleString()}`;
+  document.getElementById('totalRepaid').textContent = `€${totalRepayment.toLocaleString()}`;
+  document.getElementById('finalBalance').textContent = `€${base.toLocaleString()}`;
+  document.getElementById('lowestWeek').textContent = lowestWeek.label;
 
-  document.getElementById('totalRepaid').textContent = `€${totalRepaid.toLocaleString()}`;
-  document.getElementById('remaining').textContent = `€${remaining.toLocaleString()}`;
-  document.getElementById('finalBalance').textContent = `€${finalBalance.toLocaleString()}`;
-  document.getElementById('lowestWeek').textContent = lowestWeek;
+  updateChart(cashflow);
+}
 
-  chart.data.datasets[0].data = cash;
-  chart.update();
-});
-
-function renderChart() {
+function renderInitialChart() {
   const ctx = document.getElementById('chartCanvas').getContext('2d');
+  if (chart) chart.destroy();
+
   chart = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: weekLabels,
+      labels: weekOptions.map(w => w.label),
       datasets: [{
-        label: 'Rolling Cash Balance',
-        data: rollingCash,
-        borderColor: 'blue',
-        backgroundColor: 'rgba(0,0,255,0.1)',
-        fill: true,
-        tension: 0.3
+        label: 'Cash Balance Forecast',
+        data: Array(weekOptions.length).fill(355000),
+        borderColor: '#0077cc',
+        backgroundColor: 'rgba(0, 119, 204, 0.1)',
+        borderWidth: 2
       }]
     },
     options: {
       responsive: true,
-      maintainAspectRatio: false
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true }
+      },
+      scales: {
+        y: { beginAtZero: false }
+      }
     }
   });
 }
 
-function renderTable() {
-  const container = document.getElementById('tableContainer');
-  const table = document.createElement('table');
-  const thead = document.createElement('thead');
-  const tbody = document.createElement('tbody');
-  container.innerHTML = ''; // clear any old table
-
-  const header = ['Label', ...weekLabels];
-  const headerRow = document.createElement('tr');
-  header.forEach(h => {
-    const th = document.createElement('th');
-    th.textContent = h;
-    headerRow.appendChild(th);
-  });
-  thead.appendChild(headerRow);
-
-  const matchRows = sheetData.filter(r => typeof r[0] === 'string' && /(repayment|weekly income|rolling cash)/i.test(r[0]));
-
-  matchRows.forEach(row => {
-    const tr = document.createElement('tr');
-    tr.appendChild(Object.assign(document.createElement('td'), { textContent: row[0] }));
-    row.slice(3).forEach(c => {
-      const td = document.createElement('td');
-      td.textContent = c || '';
-      tr.appendChild(td);
-    });
-    tbody.appendChild(tr);
-  });
-
-  table.appendChild(thead);
-  table.appendChild(tbody);
-  container.innerHTML = '';
-  container.appendChild(table);
+function updateChart(data) {
+  if (!chart) return;
+  chart.data.datasets[0].data = data;
+  chart.update();
 }
 
-document.getElementById('toggleTable').addEventListener('click', () => {
-  document.getElementById('tableContainer').classList.toggle('hidden');
-  document.addEventListener('DOMContentLoaded', () => {
-  if (sheetData?.length > 0) {
-    initializeData();
-    renderTable();
-    renderChart();
-    populateWeekDropdowns();
-  }
-});
-});
+function renderTable() {
+  const container = document.createElement('div');
+  container.id = 'spreadsheetTable';
+  container.style.maxHeight = '300px';
+  container.style.overflowY = 'auto';
+  container.style.marginTop = '20px';
+  container.style.border = '1px solid #ccc';
+  container.style.padding = '10px';
+  container.style.background = '#fff';
+
+  const table = document.createElement('table');
+  table.style.width = '100%';
+  table.style.borderCollapse = 'collapse';
+
+  rawData.forEach(row => {
+    const tr = document.createElement('tr');
+    row.forEach(cell => {
+      const td = document.createElement('td');
+      td.textContent = cell || '';
+      td.style.border = '1px solid #ccc';
+      td.style.padding = '4px 6px';
+      tr.appendChild(td);
+    });
+    table.appendChild(tr);
+  });
+
+  container.appendChild(table);
+  document.body.appendChild(container);
+}
