@@ -1,26 +1,22 @@
 body {
   font-family: Arial, sans-serif;
-  background: #f8f9fa;
   padding: 20px;
+  background: #f4f4f4;
   max-width: 1000px;
   margin: auto;
 }
 
 h1 {
-  color: #007acc;
-}
-
-#controls {
-  margin: 10px 0;
+  color: #005fa3;
 }
 
 button {
-  background: #007acc;
+  margin: 5px;
+  padding: 6px 12px;
+  background: #0077cc;
   color: white;
   border: none;
-  padding: 8px 12px;
   border-radius: 4px;
-  margin-right: 6px;
   cursor: pointer;
 }
 
@@ -28,7 +24,7 @@ button:hover {
   background: #005fa3;
 }
 
-input[type="file"], select, input[type="number"] {
+input, select {
   padding: 6px;
   margin: 5px;
   font-size: 14px;
@@ -43,7 +39,7 @@ input[type="file"], select, input[type="number"] {
 #summary {
   margin-top: 20px;
   padding: 10px;
-  background: #eef;
+  background: #e3f2fd;
   border-radius: 6px;
   line-height: 1.5em;
 }
