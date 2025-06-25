@@ -4,10 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>💶 Cashflow Forecast Tool</title>
-  <link rel="stylesheet" href="style.css?v=12" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <h1>📊 Cashflow Forecast Tool</h1>
+
   <input type="file" id="excelFile" accept=".xlsx" />
   <div id="summary">
     <button id="addRepayment">➕ Add Repayment</button>
@@ -17,19 +18,18 @@
 
   <div id="repaymentsContainer"></div>
 
-  <div id="results" class="summary">
+  <div class="summary-stats">
     <p><strong>Total Repaid:</strong> <span id="totalRepaid">€0</span></p>
+    <p><strong>Remaining:</strong> <span id="remainingBalance">€355,000</span></p>
     <p><strong>Final Balance:</strong> <span id="finalBalance">€0</span></p>
     <p><strong>Lowest Week:</strong> <span id="lowestWeek">–</span></p>
-    <p><strong>Remaining:</strong> <span id="remainingBalance">€355,000</span></p>
   </div>
 
   <canvas id="chartCanvas"></canvas>
-
   <div id="tableContainer" class="hidden"></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-  <script src="script.js?v=12"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="script.js?v=300"></script>
 </body>
 </html>
