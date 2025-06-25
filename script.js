@@ -13,10 +13,40 @@ document.getElementById('excelFile').addEventListener('change', async (e) => {
 });
 
 function initializeData() {
-  weekLabels = sheetData[3].slice(3);  // row 4, columns D+
-  const rollingRow = sheetData.find(row => row[0]?.toString().toLowerCase().includes('rolling cash balance'));
-  rollingCash = rollingRow.slice(3).map(Number);
+  if (!sheetData || sheetData.length < 4) {
+    console.error("❌ Excel data too short or not structured correctly.");
+    return;
+  }
+
+  console.log("✅ Sheet loaded. Checking row 3 and 4:");
+  console.log("Row 3:", sheetData[2]);
+  console.log("Row 4 (week labels):", sheetData[3]);
+
+  // Try to find a row with week labels — look for numeric values or "Week" strings
+  const candidateRow = sheetData.find(row =>
+    row.slice(3).some(cell => typeof cell === "string" && cell.toLowerCase().includes("week"))
+  );
+
+  if (!candidateRow) {
+    console.error("❌ No row found with valid week labels.");
+    return;
+  }
+
+  weekLabels = candidateRow.slice(3).map(label => label?.toString() || "");
+  console.log("📅 Week labels set:", weekLabels);
+
+  const rollingRow = sheetData.find(row =>
+    row[0]?.toString().toLowerCase().includes("rolling cash balance")
+  );
+
+  if (!rollingRow) {
+    console.error("❌ Could not find 'Rolling Cash Balance' row.");
+    return;
+  }
+
+  rollingCash = rollingRow.slice(3).map(cell => parseFloat(cell) || 0);
   originalCash = [...rollingCash];
+  console.log("💶 Loaded cash series:", rollingCash.length);
 }
 
 function populateWeekDropdowns() {
