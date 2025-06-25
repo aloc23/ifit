@@ -1,4 +1,5 @@
 let workbook, sheetData, weekLabels = [], rollingCash = [], originalCash = [], chart;
+let repayments = [];
 
 document.getElementById('excelFile').addEventListener('change', async (e) => {
   const file = e.target.files[0];
@@ -8,36 +9,32 @@ document.getElementById('excelFile').addEventListener('change', async (e) => {
   initializeData();
   renderTable();
   renderChart();
+  populateWeekDropdowns();
 });
 
 function initializeData() {
-  weekLabels = sheetData[3].slice(3);  // row 4, starting from column D
+  weekLabels = sheetData[3].slice(3);  // row 4, columns D+
   const rollingRow = sheetData.find(row => row[0]?.toString().toLowerCase().includes('rolling cash balance'));
   rollingCash = rollingRow.slice(3).map(Number);
   originalCash = [...rollingCash];
 }
 
-let repayments = [];
+function populateWeekDropdowns() {
+  document.getElementById('repaymentInputs').innerHTML = '';
+  addRepaymentRow(); // start with one
+}
 
 function addRepaymentRow() {
-  // This should append a new dropdown + input pair to the form
-  const container = document.getElementById('repaymentContainer');
+  const container = document.getElementById('repaymentInputs');
   const row = document.createElement('div');
-  row.classList.add('repayment-row');
-  row.innerHTML = `
-    <select class="week-select"></select>
-    <input type="number" class="week-amount" placeholder="Amount €" />
-  `;
-  container.appendChild(row);
 
-  populateWeekDropdown(row.querySelector('.week-select'));
-}
-
-function populateWeekDropdown(selectElement) {
-  selectElement.innerHTML = weekLabels.map(label => `
-    <option value="${label}">${label}</option>`
-  ).join('');
-}
+  const select = document.createElement('select');
+  weekLabels.forEach((label, idx) => {
+    const option = document.createElement('option');
+    option.value = idx;
+    option.text = `Week ${idx + 1} = ${label}`;
+    select.appendChild(option);
+  });
 
   const input = document.createElement('input');
   input.type = 'number';
@@ -46,56 +43,44 @@ function populateWeekDropdown(selectElement) {
   row.appendChild(select);
   row.appendChild(input);
   container.appendChild(row);
-});
-
-function applyRepayments() {
-  // 1. Recompute rolling balances
-  const rollingBalances = computeRollingBalancesWithRepayments();
-  if (!rollingBalances || rollingBalances.length === 0) return;
-
-  // 2. Recompute summaries
-  const totalRepaid = repayments.reduce((a, b) => a + b.amount, 0);
-  const remaining = 355000 - totalRepaid;
-  const finalBalance = rollingBalances[rollingBalances.length - 1];
-  const lowestWeekIndex = rollingBalances.indexOf(Math.min(...rollingBalances));
-  const lowestWeekLabel = weekLabels[lowestWeekIndex] || '';
-
-  // 3. Update UI
-  document.getElementById('totalRepaid').innerText = formatEuro(totalRepaid);
-  document.getElementById('remaining').innerText = formatEuro(remaining);
-  document.getElementById('finalBalance').innerText = formatEuro(finalBalance);
-  document.getElementById('lowestWeek').innerText = lowestWeekLabel;
-
-  // 4. Update chart—but only if chart exists
-  if (chart && chart.data && chart.data.datasets) {
-    chart.data.datasets[0].data = rollingBalances;
-    chart.update();
-  }
 }
+
+document.getElementById('addRepayment').addEventListener('click', addRepaymentRow);
+
+document.getElementById('applyRepayments').addEventListener('click', () => {
+  if (!originalCash.length) return;
+
+  const rows = document.querySelectorAll('#repaymentInputs > div');
+  repayments = [];
+  let cash = [...originalCash];
 
   rows.forEach(row => {
     const week = parseInt(row.children[0].value);
     const amount = parseFloat(row.children[1].value) || 0;
-    rollingCash[week] -= amount;
-    totalRepaid += amount;
+    if (!isNaN(amount) && week >= 0) {
+      repayments.push({ week, amount });
+      cash[week] = cash[week] - amount;
+    }
   });
 
-  // Recalculate cumulative
-  for (let i = 1; i < rollingCash.length; i++) {
-    rollingCash[i] += rollingCash[i - 1] - originalCash[i - 1];
+  for (let i = 1; i < cash.length; i++) {
+    cash[i] = cash[i - 1] + (cash[i] - originalCash[i - 1]);
   }
 
-  updateSummary(totalRepaid);
-  updateChart();
-});
+  const totalRepaid = repayments.reduce((sum, r) => sum + r.amount, 0);
+  const remaining = 355000 - totalRepaid;
+  const finalBalance = cash[cash.length - 1] || 0;
+  const lowest = Math.min(...cash);
+  const lowestWeek = weekLabels[cash.indexOf(lowest)] || '–';
 
-function updateSummary(total) {
-  document.getElementById('totalRepaid').textContent = `€${total.toLocaleString()}`;
-  document.getElementById('remaining').textContent = `€${(355000 - total).toLocaleString()}`;
-  document.getElementById('finalBalance').textContent = `€${rollingCash[rollingCash.length - 1].toLocaleString()}`;
-  const min = Math.min(...rollingCash);
-  document.getElementById('lowestWeek').textContent = weekLabels[rollingCash.indexOf(min)];
-}
+  document.getElementById('totalRepaid').textContent = `€${totalRepaid.toLocaleString()}`;
+  document.getElementById('remaining').textContent = `€${remaining.toLocaleString()}`;
+  document.getElementById('finalBalance').textContent = `€${finalBalance.toLocaleString()}`;
+  document.getElementById('lowestWeek').textContent = lowestWeek;
+
+  chart.data.datasets[0].data = cash;
+  chart.update();
+});
 
 function renderChart() {
   const ctx = document.getElementById('chartCanvas').getContext('2d');
@@ -118,15 +103,6 @@ function renderChart() {
     }
   });
 }
-
-function updateChart() {
-  chart.data.datasets[0].data = rollingCash;
-  chart.update();
-}
-
-document.getElementById('toggleTable').addEventListener('click', () => {
-  document.getElementById('tableContainer').classList.toggle('hidden');
-});
 
 function renderTable() {
   const container = document.getElementById('tableContainer');
@@ -161,3 +137,7 @@ function renderTable() {
   container.innerHTML = '';
   container.appendChild(table);
 }
+
+document.getElementById('toggleTable').addEventListener('click', () => {
+  document.getElementById('tableContainer').classList.toggle('hidden');
+});
