@@ -10,26 +10,26 @@
   <h1>📊 Cashflow Forecast Tool</h1>
 
   <input type="file" id="excelFile" accept=".xlsx" />
-  <div id="summary">
+  <div id="controls">
     <button id="addRepayment">➕ Add Repayment</button>
     <button id="applyRepayments">✅ Apply Repayments</button>
-    <button id="toggleFullTable">📑 Toggle Full Table</button>
+    <button id="toggleTable">📑 Toggle Spreadsheet</button>
   </div>
 
-  <div id="repaymentsContainer"></div>
+  <div id="repaymentInputs"></div>
 
-  <div class="summary-stats">
+  <div id="summary">
     <p><strong>Total Repaid:</strong> <span id="totalRepaid">€0</span></p>
-    <p><strong>Remaining:</strong> <span id="remainingBalance">€355,000</span></p>
+    <p><strong>Remaining:</strong> <span id="remaining">€355,000</span></p>
     <p><strong>Final Balance:</strong> <span id="finalBalance">€0</span></p>
     <p><strong>Lowest Week:</strong> <span id="lowestWeek">–</span></p>
   </div>
 
-  <canvas id="chartCanvas"></canvas>
+  <canvas id="chartCanvas" height="300"></canvas>
   <div id="tableContainer" class="hidden"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="script.js?v=300"></script>
+  <script src="script.js?v=999"></script>
 </body>
 </html>
