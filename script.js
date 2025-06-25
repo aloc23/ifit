@@ -3,7 +3,10 @@ let chart;
 let repayments = [];
 let balanceRow = -1;
 let incomeRow = -1;
-let remainingStart = 0;
+let remainingStart = balanceData[1] || 0;
+if (!remainingStart || isNaN(remainingStart)) {
+  remainingStart = 355000; // fallback default if undefined
+}
 
 document.getElementById('fileInput').addEventListener('change', async (e) => {
   const file = e.target.files[0];
@@ -74,6 +77,8 @@ function applyRepayments() {
     const amount = parseFloat(row.children[1].value);
     if (!isNaN(weekIdx) && !isNaN(amount)) {
       repayments.push({ weekIdx, amount });
+      document.getElementById("remaining").textContent = `€${(remainingStart - totalRepaid).toLocaleString()}`;
+      buildChart();
     }
   }
   buildChart();
@@ -82,6 +87,11 @@ function applyRepayments() {
 
 function buildChart() {
   if (balanceRow < 0 || incomeRow < 0) return;
+  if (!balances.length || balances.some(val => isNaN(val))) {
+  console.error("Invalid balances data:", balances);
+  return; // Abort rendering
+    document.getElementById("chartCanvas").style.maxHeight = '400px';
+}
 
   const balanceData = workbookData[balanceRow];
   const incomeData = workbookData[incomeRow];
