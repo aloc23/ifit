@@ -3,22 +3,19 @@ body {
   margin: 20px;
   background: #f4f4f4;
 }
-
 h1 {
   color: #0077cc;
+  margin-bottom: 15px;
 }
-
 .summary-bar {
   display: flex;
-  gap: 20px;
-  margin: 15px 0;
   flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 15px;
 }
-
 .controls {
   margin-bottom: 15px;
 }
-
 button {
   background: #007bff;
   color: white;
@@ -31,25 +28,22 @@ button {
 button:hover {
   background: #0056b3;
 }
-
 input[type="file"] {
   margin-bottom: 15px;
 }
-
 #repaymentContainer div {
   margin-bottom: 8px;
 }
 select, input[type="number"] {
   padding: 5px;
   margin-right: 6px;
+  width: 200px;
 }
-
 #chartCanvas {
   width: 100%;
   height: 400px;
   margin: 20px 0;
 }
-
 #tableWrapper {
   overflow-x: auto;
   max-height: 500px;
@@ -57,7 +51,6 @@ select, input[type="number"] {
   padding: 10px;
   border: 1px solid #ccc;
 }
-
 #tableWrapper.hidden {
   display: none;
 }
