@@ -109,6 +109,7 @@ function renderTable() {
   const table = document.createElement('table');
   const thead = document.createElement('thead');
   const tbody = document.createElement('tbody');
+  container.innerHTML = ''; // clear any old table
 
   const header = ['Label', ...weekLabels];
   const headerRow = document.createElement('tr');
