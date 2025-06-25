@@ -38,10 +38,30 @@ document.getElementById('addRepayment').addEventListener('click', () => {
   container.appendChild(row);
 });
 
-document.getElementById('applyRepayments').addEventListener('click', () => {
-  const rows = document.querySelectorAll('#repaymentInputs > div');
-  rollingCash = [...originalCash];
-  let totalRepaid = 0;
+function applyRepayments() {
+  // 1. Recompute rolling balances
+  const rollingBalances = computeRollingBalancesWithRepayments();
+  if (!rollingBalances || rollingBalances.length === 0) return;
+
+  // 2. Recompute summaries
+  const totalRepaid = repayments.reduce((a, b) => a + b.amount, 0);
+  const remaining = 355000 - totalRepaid;
+  const finalBalance = rollingBalances[rollingBalances.length - 1];
+  const lowestWeekIndex = rollingBalances.indexOf(Math.min(...rollingBalances));
+  const lowestWeekLabel = weekLabels[lowestWeekIndex] || '';
+
+  // 3. Update UI
+  document.getElementById('totalRepaid').innerText = formatEuro(totalRepaid);
+  document.getElementById('remaining').innerText = formatEuro(remaining);
+  document.getElementById('finalBalance').innerText = formatEuro(finalBalance);
+  document.getElementById('lowestWeek').innerText = lowestWeekLabel;
+
+  // 4. Update chart—but only if chart exists
+  if (chart && chart.data && chart.data.datasets) {
+    chart.data.datasets[0].data = rollingBalances;
+    chart.update();
+  }
+}
 
   rows.forEach(row => {
     const week = parseInt(row.children[0].value);
