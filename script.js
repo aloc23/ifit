@@ -1,156 +1,167 @@
-let weeklyLabels = [], weeklyIncome = [], rollingBalance = [];
-let baseBalance = 0, repayments = [];
-let chart, incomeRowIx, balanceRowIx, repayRowIx;
+let workbookData = [];
+let chart;
+let repayments = [];
+let balanceRow = -1;
+let incomeRow = -1;
+let remainingStart = 0;
 
-document.getElementById('fileInput').addEventListener('change', handleFile);
-document.getElementById('addRepaymentBtn').addEventListener('click', addRepaymentRow);
-document.getElementById('applyRepaymentsBtn').addEventListener('click', applyRepayments);
-document.getElementById('toggleTableBtn').addEventListener('click', toggleTable);
+document.getElementById('fileInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
 
-function handleFile(e) {
   const reader = new FileReader();
-  reader.onload = evt => {
-    const wb = XLSX.read(evt.target.result, { type: 'array' });
-    const sheet = wb.Sheets[wb.SheetNames[0]];
-    const arr = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-    detectRows(arr);
-    extractData(arr);
-    buildTable(sheet);
-    resetUI();
-  };
-  reader.readAsArrayBuffer(e.target.files[0]);
-}
+  reader.onload = async (e) => {
+    const data = new Uint8Array(e.target.result);
+    const workbook = XLSX.read(data, { type: 'array' });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    workbookData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-function detectRows(arr) {
-  incomeRowIx = balanceRowIx = repayRowIx = -1;
-  arr.forEach((row, i) => {
-    const s = row.join(' ');
-    if (/Weekly income \/ cash position/i.test(s)) incomeRowIx = i;
-    if (/Rolling cash balance/i.test(s)) balanceRowIx = i;
-    if (/Mayweather Investment Repayment/i.test(s)) repayRowIx = i;
+    document.getElementById('fileName').textContent = file.name;
+
+    locateKeyRows();
+    initRepaymentRow();
+    buildChart();
+    buildTable();
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+function locateKeyRows() {
+  workbookData.forEach((row, idx) => {
+    if (row.includes("Rolling Cash Balance")) balanceRow = idx;
+    if (row.includes("Weekly income / cash position")) incomeRow = idx;
+    if (row[0] && row[0].toString().includes("Bank Balance Overdraft")) {
+      const firstVal = row.find(cell => typeof cell === 'number');
+      if (firstVal) remainingStart = firstVal;
+    }
   });
 }
 
-function extractData(arr) {
-  weeklyLabels = arr[3].slice(1);
-  weeklyIncome = arr[incomeRowIx].slice(1).map(v => +v || 0);
-  rollingBalance = arr[balanceRowIx].slice(1).map(v => +v || 0);
-  baseBalance = rollingBalance[0] || 0;
-  renderAll();
-}
-
-function renderAll() {
-  renderSummary(rollingBalance);
-  renderChart(rollingBalance);
-  document.getElementById('repaymentContainer').innerHTML = '';
+function initRepaymentRow() {
+  const container = document.getElementById('repaymentContainer');
+  container.innerHTML = '';
   addRepaymentRow();
 }
 
 function addRepaymentRow() {
-  const ctr = document.getElementById('repaymentContainer');
-  const div = document.createElement('div');
-  const sel = document.createElement('select');
-  weeklyLabels.forEach((w, i) => {
-    const opt = document.createElement('option');
-    opt.value = i;
-    opt.textContent = w;
-    sel.append(opt);
-  });
-  const inp = document.createElement('input');
-  inp.type = 'number';
-  inp.placeholder = 'Amount €';
-  div.append(sel, inp);
-  ctr.append(div);
+  const row = document.createElement('div');
+  const weekSelect = document.createElement('select');
+  const amountInput = document.createElement('input');
+  amountInput.type = 'number';
+  amountInput.placeholder = "Amount €";
+
+  const headers = workbookData[3]; // Week numbers
+  const labels = workbookData[2];  // e.g. May 25, etc.
+
+  if (!headers || !labels) return;
+
+  for (let i = 1; i < headers.length; i++) {
+    const weekLabel = `Week ${headers[i]} = ${labels[i] || ""}`;
+    const opt = new Option(weekLabel, i);
+    weekSelect.add(opt);
+  }
+
+  row.appendChild(weekSelect);
+  row.appendChild(amountInput);
+  document.getElementById('repaymentContainer').appendChild(row);
 }
 
 function applyRepayments() {
   repayments = [];
-  Array.from(document.getElementById('repaymentContainer').children)
-    .forEach(div => {
-      const w = +div.children[0].value;
-      const val = +div.children[1].value || 0;
-      if (!isNaN(w) && !isNaN(val)) { repayments.push({ w, val }); }
-    });
+  const rows = document.getElementById('repaymentContainer').children;
+  for (let row of rows) {
+    const weekIdx = parseInt(row.children[0].value);
+    const amount = parseFloat(row.children[1].value);
+    if (!isNaN(weekIdx) && !isNaN(amount)) {
+      repayments.push({ weekIdx, amount });
+    }
+  }
+  buildChart();
+  buildTable();
+}
 
-  let modIncome = [...weeklyIncome];
-  repayments.forEach(({ w, val }) => {
-    modIncome[w] = (modIncome[w] || 0) - val;
+function buildChart() {
+  if (balanceRow < 0 || incomeRow < 0) return;
+
+  const balanceData = workbookData[balanceRow];
+  const incomeData = workbookData[incomeRow];
+  const labels = workbookData[2];
+
+  const balances = [];
+  const weeks = [];
+
+  let totalRepaid = 0;
+  const repaymentMap = {};
+
+  repayments.forEach(r => {
+    repaymentMap[r.weekIdx] = (repaymentMap[r.weekIdx] || 0) + r.amount;
+    totalRepaid += r.amount;
   });
 
-  const newBal = [baseBalance];
-  for (let i = 1; i < modIncome.length; i++) {
-    newBal[i] = newBal[i - 1] + (modIncome[i] || 0);
+  let currentBalance = remainingStart;
+  for (let i = 1; i < balanceData.length; i++) {
+    const income = Number(incomeData[i]) || 0;
+    const repayment = repaymentMap[i] || 0;
+
+    currentBalance += income - repayment;
+    balances.push(currentBalance);
+    weeks.push(`Week ${workbookData[3][i]}`);
   }
 
-  if (newBal.some(n => isNaN(n))) {
-    alert("Invalid balance calculation.");
-    return;
-  }
-
-  updateSpreadsheetRows(repayments);
-  renderSummary(newBal);
-  renderChart(newBal);
-}
-
-function updateSpreadsheetRows(reps) {
-  const tbl = document.querySelector('#tableWrapper table');
-  if (!tbl) return;
-  const rows = tbl.querySelectorAll('tr');
-  const repayRow = rows[repayRowIx];
-  const incomeRow = rows[incomeRowIx];
-
-  reps.forEach(({ w, val }) => {
-    const rc = repayRow?.children[w + 1];
-    if (rc) {
-      const old = parseFloat(rc.textContent.replace(/,/g, '')) || 0;
-      rc.textContent = (old - val).toLocaleString();
-      rc.style.backgroundColor = '#ffe6e6';
-    }
-    const ic = incomeRow?.children[w + 1];
-    if (ic) {
-      const old = parseFloat(ic.textContent.replace(/,/g, '')) || 0;
-      ic.textContent = (old - val).toLocaleString();
-      ic.style.backgroundColor = '#e6f7ff';
-    }
-  });
-}
-
-function renderSummary(bal) {
-  const sum = repayments.reduce((a, v) => a + v.val, 0);
-  const final = bal[bal.length - 1];
-  const min = Math.min(...bal);
-  const idx = bal.indexOf(min);
-
-  document.getElementById('totalRepaid').textContent = `€${sum.toLocaleString()}`;
-  document.getElementById('finalBalance').textContent = `€${final.toLocaleString()}`;
-  document.getElementById('lowestWeek').textContent = weeklyLabels[idx];
-  document.getElementById('remaining').textContent = `€${(baseBalance - sum).toLocaleString()}`;
-}
-
-function renderChart(bal) {
-  const ctx = document.getElementById('chartCanvas').getContext('2d');
+  const ctx = document.getElementById("chartCanvas").getContext("2d");
   if (chart) chart.destroy();
   chart = new Chart(ctx, {
     type: 'line',
-    data: { labels: weeklyLabels, datasets: [{ label: 'Rolling Cash Balance', data: bal, borderColor: '#0288d1', fill: true, backgroundColor: 'rgba(2,136,209,0.2)' }] },
-    options: { responsive: true, maintainAspectRatio: false, animation: false }
+    data: {
+      labels: weeks,
+      datasets: [{
+        label: "Cash Balance Forecast",
+        data: balances,
+        borderColor: "blue",
+        backgroundColor: "rgba(0, 0, 255, 0.1)",
+        fill: true,
+        tension: 0.2
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: true },
+        tooltip: { mode: 'index' }
+      },
+      scales: {
+        y: {
+          beginAtZero: false
+        }
+      }
+    }
+  });
+
+  const lowest = Math.min(...balances);
+  const lowestIdx = balances.indexOf(lowest);
+  document.getElementById("lowestWeek").textContent = `Week ${workbookData[3][lowestIdx + 1]} = ${workbookData[2][lowestIdx + 1]}`;
+  document.getElementById("finalBalance").textContent = `€${balances[balances.length - 1].toLocaleString()}`;
+  document.getElementById("totalRepaid").textContent = `€${totalRepaid.toLocaleString()}`;
+  document.getElementById("remaining").textContent = `€${(remainingStart - totalRepaid).toLocaleString()}`;
+}
+
+function buildTable() {
+  const table = document.getElementById("dataTable");
+  table.innerHTML = "";
+  workbookData.forEach(row => {
+    const tr = document.createElement("tr");
+    row.forEach(cell => {
+      const td = document.createElement("td");
+      td.textContent = cell;
+      tr.appendChild(td);
+    });
+    table.appendChild(tr);
   });
 }
 
-function buildTable(sheet) {
-  const html = XLSX.utils.sheet_to_html(sheet);
-  document.getElementById('tableWrapper').innerHTML = html;
-}
-
-function toggleTable() {
-  document.getElementById('tableWrapper').classList.toggle('hidden');
-}
-
-function resetUI() {
-  repayments = [];
-  document.getElementById('repaymentContainer').innerHTML = '';
-  document.getElementById('totalRepaid').textContent = '€0';
-  document.getElementById('finalBalance').textContent = '€0';
-  document.getElementById('lowestWeek').textContent = '–';
-  document.getElementById('remaining').textContent = '€0';
-}
+document.getElementById("addRepaymentBtn").addEventListener("click", addRepaymentRow);
+document.getElementById("applyRepaymentsBtn").addEventListener("click", applyRepayments);
+document.getElementById("toggleTableBtn").addEventListener("click", () => {
+  const wrap = document.getElementById("tableWrapper");
+  wrap.style.display = wrap.style.display === "none" ? "block" : "none";
+});
