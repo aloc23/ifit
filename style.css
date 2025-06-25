@@ -1,19 +1,17 @@
 body {
   font-family: Arial, sans-serif;
   padding: 20px;
-  background: #f4f4f4;
-  max-width: 1000px;
-  margin: auto;
+  background: #f5f5f5;
 }
 
 h1 {
-  color: #005fa3;
+  color: #0077cc;
 }
 
 button {
   margin: 5px;
-  padding: 6px 12px;
-  background: #0077cc;
+  padding: 10px 15px;
+  background-color: #0077cc;
   color: white;
   border: none;
   border-radius: 4px;
@@ -21,33 +19,49 @@ button {
 }
 
 button:hover {
-  background: #005fa3;
+  background-color: #005fa3;
 }
 
-input, select {
-  padding: 6px;
-  margin: 5px;
-  font-size: 14px;
-}
-
-.repaymentRow {
-  margin: 8px 0;
-  display: flex;
-  gap: 10px;
-}
-
-#summary {
-  margin-top: 20px;
-  padding: 10px;
-  background: #e3f2fd;
+.summary {
+  margin: 20px 0;
+  padding: 20px;
+  background: #eaf6ff;
   border-radius: 6px;
-  line-height: 1.5em;
 }
 
-#chartCanvas {
-  display: block;
-  margin-top: 20px;
-  background: white;
-  border: 1px solid #ccc;
+canvas {
+  width: 100% !important;
   max-height: 400px;
+}
+
+.hidden {
+  display: none;
+}
+
+#repaymentsContainer div {
+  display: flex;
+  margin-bottom: 10px;
+}
+
+#repaymentsContainer select,
+#repaymentsContainer input {
+  margin-right: 10px;
+}
+
+#tableContainer table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  background-color: white;
+}
+
+#tableContainer th,
+#tableContainer td {
+  border: 1px solid #ccc;
+  padding: 4px;
+  text-align: center;
+}
+
+#tableContainer tr:nth-child(odd) {
+  background-color: #f9f9f9;
 }
