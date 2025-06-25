@@ -35,7 +35,9 @@ input[type="file"], select, input[type="number"] {
 }
 
 .repaymentRow {
-  margin-bottom: 10px;
+  margin: 8px 0;
+  display: flex;
+  gap: 10px;
 }
 
 #summary {
