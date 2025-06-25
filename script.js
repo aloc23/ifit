@@ -1,7 +1,6 @@
 let chartInstance;
 let weekOptions = [];
 let balanceData = [];
-let repaymentRows = [];
 
 function handleFile(event) {
   const file = event.target.files[0];
@@ -14,46 +13,16 @@ function handleFile(event) {
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-    // Get weeks from row 4
-    const weekLabels = json[3].slice(2);
+    const weekLabels = json[3].slice(2); // Row 4 = week labels
     weekOptions = weekLabels;
 
-    // Display dropdowns
-  function updateDropdowns() {
-  const container = document.getElementById("repaymentContainer");
-  container.innerHTML = ''; // Clear previous entries
-  addRepaymentRow();
-}
+    updateDropdowns();
 
-function addRepaymentRow() {
-  const container = document.getElementById("repaymentContainer");
-
-  const row = document.createElement("div");
-  row.classList.add("repaymentRow");
-
-  const select = document.createElement("select");
-  weekOptions.forEach((week, index) => {
-    const option = document.createElement("option");
-    option.value = week;
-    option.textContent = week;
-    select.appendChild(option);
-  });
-
-  const input = document.createElement("input");
-  input.type = "number";
-  input.placeholder = "Amount €";
-
-  row.appendChild(select);
-  row.appendChild(input);
-  container.appendChild(row);
-}
-
-    // Find "Weekly income / cash position" and "Rolling Cash Balance"
-    const weeklyRow = json.find(row => row[1] && typeof row[1] === 'string' && row[1].toLowerCase().includes("weekly income"));
-    const rollingRow = json.find(row => row[1] && typeof row[1] === 'string' && row[1].toLowerCase().includes("rolling cash balance"));
+    const weeklyRow = json.find(row => row[1]?.toLowerCase().includes("weekly income"));
+    const rollingRow = json.find(row => row[1]?.toLowerCase().includes("rolling cash balance"));
 
     if (!weeklyRow || !rollingRow) {
-      alert("Spreadsheet rows not detected");
+      alert("Spreadsheet missing income/balance rows.");
       return;
     }
 
@@ -75,14 +44,17 @@ function addRepaymentRow() {
 }
 
 function updateDropdowns() {
-  document.querySelectorAll(".repaymentRow").forEach(row => row.remove());
-
+  const container = document.getElementById("repaymentContainer");
+  container.innerHTML = '';
   addRepaymentRow();
 }
 
 function addRepaymentRow() {
-  const container = document.createElement("div");
-  container.classList.add("repaymentRow");
+  const container = document.getElementById("repaymentContainer");
+  if (!container) return;
+
+  const row = document.createElement("div");
+  row.classList.add("repaymentRow");
 
   const select = document.createElement("select");
   weekOptions.forEach(week => {
@@ -96,9 +68,9 @@ function addRepaymentRow() {
   input.type = "number";
   input.placeholder = "Amount €";
 
-  container.appendChild(select);
-  container.appendChild(input);
-  document.body.insertBefore(container, document.getElementById("summary"));
+  row.appendChild(select);
+  row.appendChild(input);
+  container.appendChild(row);
 }
 
 function applyRepayments() {
@@ -113,28 +85,26 @@ function applyRepayments() {
     }
   });
 
-  // Copy original data to preserve
+  // Copy the original data
   const updatedData = balanceData.map(entry => ({ ...entry }));
-
-  let totalRepaid = 0;
 
   repayments.forEach(({ week, amount }) => {
     const index = updatedData.findIndex(e => e.week === week);
     if (index !== -1) {
-      updatedData[index].balance -= amount;
-      totalRepaid += amount;
-
-      // Cascade the effect
-      for (let i = index + 1; i < updatedData.length; i++) {
-        updatedData[i].balance -= amount;
-      }
+      updatedData[index].income -= amount;
     }
   });
 
-  // Update chart
+  // Recalculate rolling balances like the spreadsheet
+  updatedData[0].balance = updatedData[0].income;
+  for (let i = 1; i < updatedData.length; i++) {
+    updatedData[i].balance = updatedData[i - 1].balance + updatedData[i].income;
+  }
+
+  // Rebuild chart with new balance values
   buildChart(updatedData);
 
-  // Determine lowest week
+  const totalRepaid = repayments.reduce((sum, r) => sum + r.amount, 0);
   const lowest = updatedData.reduce((min, curr) => curr.balance < min.balance ? curr : min, updatedData[0]);
 
   document.getElementById("lowestWeek").textContent = `Week ${lowest.week}`;
@@ -142,39 +112,33 @@ function applyRepayments() {
 }
 
 function updateSummary(totalRepaid) {
-  const remainingStart = balanceData[1] || 355000;
+  const remainingStart = 355000;
   document.getElementById("totalRepaid").textContent = `€${totalRepaid.toLocaleString()}`;
   document.getElementById("finalBalance").textContent = `€${(remainingStart - totalRepaid).toLocaleString()}`;
   document.getElementById("remaining").textContent = `€${(remainingStart - totalRepaid).toLocaleString()}`;
 }
 
 function buildChart(data = balanceData) {
-  if (!data.length || data.some(d => isNaN(d.balance))) {
-    console.warn("No valid data for chart");
-    return;
-  }
+  if (!data.length || data.some(d => isNaN(d.balance))) return;
 
   const labels = data.map(e => e.week);
   const values = data.map(e => e.balance);
-
   const ctx = document.getElementById("chartCanvas").getContext("2d");
 
-  if (chartInstance) {
-    chartInstance.destroy();
-  }
+  if (chartInstance) chartInstance.destroy();
 
   document.getElementById("chartCanvas").style.maxHeight = '400px';
 
   chartInstance = new Chart(ctx, {
     type: "line",
     data: {
-      labels: labels,
+      labels,
       datasets: [{
-        label: "Cash Balance Forecast",
+        label: "Rolling Cash Balance",
         data: values,
         borderColor: "blue",
         fill: true,
-        pointRadius: 3
+        tension: 0.3
       }]
     },
     options: {
