@@ -1,81 +1,63 @@
 body {
-  font-family: 'Segoe UI', sans-serif;
-  background: #f6f6f6;
-  padding: 20px;
-  color: #333;
+  font-family: Arial, sans-serif;
+  margin: 20px;
+  background: #f4f4f4;
 }
 
-.container {
-  max-width: 1200px;
-  margin: auto;
-  background: #fff;
-  padding: 25px;
-  border-radius: 8px;
-  box-shadow: 0 0 20px rgba(0,0,0,0.05);
-}
-
-h1 span {
+h1 {
   color: #0077cc;
 }
 
-.controls, .summary {
-  margin: 15px 0;
+.summary-bar {
   display: flex;
+  gap: 20px;
+  margin: 15px 0;
   flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
+}
+
+.controls {
+  margin-bottom: 15px;
 }
 
 button {
-  padding: 10px 14px;
-  border: none;
   background: #007bff;
   color: white;
-  font-weight: bold;
+  border: none;
+  padding: 8px 12px;
+  margin-right: 8px;
   border-radius: 4px;
   cursor: pointer;
 }
-
 button:hover {
   background: #0056b3;
 }
 
 input[type="file"] {
-  margin: 10px 0;
+  margin-bottom: 15px;
+}
+
+#repaymentContainer div {
+  margin-bottom: 8px;
+}
+select, input[type="number"] {
+  padding: 5px;
+  margin-right: 6px;
 }
 
 #chartCanvas {
-  margin-top: 25px;
-  max-width: 100%;
+  width: 100%;
+  height: 400px;
+  margin: 20px 0;
 }
 
 #tableWrapper {
-  margin-top: 20px;
   overflow-x: auto;
   max-height: 500px;
-  transition: max-height 0.3s ease-in-out;
-}
-
-#tableWrapper table {
-  border-collapse: collapse;
-  width: max-content;
-  min-width: 100%;
-  background: #fff;
+  background: white;
+  padding: 10px;
   border: 1px solid #ccc;
 }
 
-#tableWrapper th, #tableWrapper td {
-  padding: 6px 10px;
-  border: 1px solid #ccc;
-  white-space: nowrap;
-}
-
-.hidden-scroll {
+#tableWrapper.hidden {
   display: none;
-}
-
-input[type="number"], select {
-  padding: 5px;
-  margin: 5px;
-  font-size: 0.95em;
 }
