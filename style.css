@@ -1,20 +1,26 @@
 body {
   font-family: Arial, sans-serif;
+  background: #f8f9fa;
   padding: 20px;
-  background: #f7f7f7;
+  max-width: 1000px;
+  margin: auto;
 }
 
 h1 {
-  color: #0077cc;
+  color: #007acc;
+}
+
+#controls {
+  margin: 10px 0;
 }
 
 button {
-  margin: 5px;
-  padding: 6px 12px;
-  background: #0077cc;
+  background: #007acc;
   color: white;
   border: none;
+  padding: 8px 12px;
   border-radius: 4px;
+  margin-right: 6px;
   cursor: pointer;
 }
 
@@ -22,40 +28,28 @@ button:hover {
   background: #005fa3;
 }
 
-input, select {
-  margin: 4px;
+input[type="file"], select, input[type="number"] {
   padding: 6px;
+  margin: 5px;
   font-size: 14px;
 }
 
-#repaymentContainer {
-  margin-top: 10px;
+.repaymentRow {
+  margin-bottom: 10px;
 }
 
-.summary {
-  display: flex;
-  gap: 40px;
-  margin: 15px 0;
+#summary {
+  margin-top: 20px;
+  padding: 10px;
+  background: #eef;
+  border-radius: 6px;
+  line-height: 1.5em;
 }
 
 #chartCanvas {
-  background: #fff;
+  display: block;
+  margin-top: 20px;
+  background: white;
   border: 1px solid #ccc;
-  margin-top: 10px;
-}
-
-table {
-  border-collapse: collapse;
-  margin-top: 10px;
-  width: 100%;
-  font-size: 12px;
-}
-
-table, th, td {
-  border: 1px solid #999;
-}
-
-th, td {
-  padding: 4px 6px;
-  text-align: center;
+  max-height: 400px;
 }
