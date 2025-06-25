@@ -42,12 +42,7 @@ function extractData(arr) {
 function renderAll() {
   renderSummary(rollingBalance);
   renderChart(rollingBalance);
-  createRepaymentUI();
-}
-
-function createRepaymentUI() {
-  const ctr = document.getElementById('repaymentContainer');
-  ctr.innerHTML = '';
+  document.getElementById('repaymentContainer').innerHTML = '';
   addRepaymentRow();
 }
 
@@ -74,16 +69,12 @@ function applyRepayments() {
     .forEach(div => {
       const w = +div.children[0].value;
       const val = +div.children[1].value || 0;
-      if (!isNaN(w) && !isNaN(val)) {
-        repayments.push({ w, val });
-      }
+      if (!isNaN(w) && !isNaN(val)) { repayments.push({ w, val }); }
     });
 
   let modIncome = [...weeklyIncome];
   repayments.forEach(({ w, val }) => {
-    if (!isNaN(w) && !isNaN(val)) {
-      modIncome[w] = (modIncome[w] || 0) - val;
-    }
+    modIncome[w] = (modIncome[w] || 0) - val;
   });
 
   const newBal = [baseBalance];
@@ -91,13 +82,14 @@ function applyRepayments() {
     newBal[i] = newBal[i - 1] + (modIncome[i] || 0);
   }
 
-  if (newBal.every(n => typeof n === 'number' && !isNaN(n))) {
-    updateSpreadsheetRows(repayments);
-    renderSummary(newBal);
-    renderChart(newBal);
-  } else {
-    alert("Invalid balance calculation. Please check your inputs.");
+  if (newBal.some(n => isNaN(n))) {
+    alert("Invalid balance calculation.");
+    return;
   }
+
+  updateSpreadsheetRows(repayments);
+  renderSummary(newBal);
+  renderChart(newBal);
 }
 
 function updateSpreadsheetRows(reps) {
@@ -106,18 +98,19 @@ function updateSpreadsheetRows(reps) {
   const rows = tbl.querySelectorAll('tr');
   const repayRow = rows[repayRowIx];
   const incomeRow = rows[incomeRowIx];
+
   reps.forEach(({ w, val }) => {
-    const rcell = repayRow?.children[w + 1];
-    if (rcell) {
-      const oldVal = parseFloat(rcell.textContent.replace(/,/g, '')) || 0;
-      rcell.textContent = (oldVal - val).toLocaleString();
-      rcell.style.backgroundColor = '#ffe6e6';
+    const rc = repayRow?.children[w + 1];
+    if (rc) {
+      const old = parseFloat(rc.textContent.replace(/,/g, '')) || 0;
+      rc.textContent = (old - val).toLocaleString();
+      rc.style.backgroundColor = '#ffe6e6';
     }
-    const icell = incomeRow?.children[w + 1];
-    if (icell) {
-      const iv = parseFloat(icell.textContent.replace(/,/g, '')) || 0;
-      icell.textContent = (iv - val).toLocaleString();
-      icell.style.backgroundColor = '#e6f7ff';
+    const ic = incomeRow?.children[w + 1];
+    if (ic) {
+      const old = parseFloat(ic.textContent.replace(/,/g, '')) || 0;
+      ic.textContent = (old - val).toLocaleString();
+      ic.style.backgroundColor = '#e6f7ff';
     }
   });
 }
@@ -126,10 +119,11 @@ function renderSummary(bal) {
   const sum = repayments.reduce((a, v) => a + v.val, 0);
   const final = bal[bal.length - 1];
   const min = Math.min(...bal);
-  const minIndex = bal.indexOf(min);
+  const idx = bal.indexOf(min);
+
   document.getElementById('totalRepaid').textContent = `€${sum.toLocaleString()}`;
   document.getElementById('finalBalance').textContent = `€${final.toLocaleString()}`;
-  document.getElementById('lowestWeek').textContent = weeklyLabels[minIndex];
+  document.getElementById('lowestWeek').textContent = weeklyLabels[idx];
   document.getElementById('remaining').textContent = `€${(baseBalance - sum).toLocaleString()}`;
 }
 
@@ -138,28 +132,14 @@ function renderChart(bal) {
   if (chart) chart.destroy();
   chart = new Chart(ctx, {
     type: 'line',
-    data: {
-      labels: weeklyLabels,
-      datasets: [{
-        label: 'Rolling Cash Balance',
-        data: bal,
-        borderColor: '#0288d1',
-        fill: true,
-        backgroundColor: 'rgba(2,136,209,0.2)'
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: false
-    }
+    data: { labels: weeklyLabels, datasets: [{ label: 'Rolling Cash Balance', data: bal, borderColor: '#0288d1', fill: true, backgroundColor: 'rgba(2,136,209,0.2)' }] },
+    options: { responsive: true, maintainAspectRatio: false, animation: false }
   });
 }
 
 function buildTable(sheet) {
   const html = XLSX.utils.sheet_to_html(sheet);
-  const wr = document.getElementById('tableWrapper');
-  wr.innerHTML = html;
+  document.getElementById('tableWrapper').innerHTML = html;
 }
 
 function toggleTable() {
