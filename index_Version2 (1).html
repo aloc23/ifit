@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Cashflow Forecast Tool</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Chart.js, xlsx, html2canvas, jsPDF libraries here -->
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Collapsible section styles (add to your CSS file for best results) */
+    .collapsible-section { margin-bottom: 24px; }
+    .toggle-btn {
+      background: #f2f7ff;
+      border: 1px solid #b6daff;
+      color: #0077cc;
+      border-radius: 5px;
+      padding: 6px 15px;
+      font-size: 15px;
+      cursor: pointer;
+      margin-bottom: 10px;
+      margin-top: 8px;
+      transition: background .18s, color .18s;
+    }
+    .toggle-btn:hover { background: #e1efff; color: #005fa3; }
+    .spreadsheet-summary-table th,
+    .spreadsheet-summary-table td {
+      text-align: center;
+      padding: 4px 8px;
+      border: 1px solid #dbeaff;
+    }
+    .spreadsheet-summary-table th {
+      background: #f0f7ff;
+      font-weight: 500;
+      position: sticky;
+      left: 0;
+      z-index: 2;
+    }
+    .spreadsheet-summary-table { border-collapse: collapse; width: 100%; }
+    .spreadsheet-summary-table .balance-row { background: #e4ffe4; font-weight: bold;}
+    .spreadsheet-summary-table .week-label-row td { background: #f7fbff; font-weight: 500;}
+    .spreadsheet-summary-table .sticky-week-label { background: #eaf5ff; position: sticky; left: 0; z-index: 1;}
+    .spreadsheet-summary-scroll { overflow-x: auto; max-width: 98vw; }
+    @media (max-width: 900px) { .spreadsheet-summary-scroll { font-size: 12px; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Cashflow Forecast Tool</h1>
+    <div class="repayment-controls">
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+      <button id="addRepayment" title="Add a new repayment input">+ Add Repayment</button>
+      <button id="clearRepayments">Clear Repayments</button>
+      <button id="savePlan">💾 Save Plan</button>
+      <button id="loadPlan">📂 Load Plan</button>
+      <button id="exportExcel">Export to Excel</button>
+      <button id="exportPDF">Export to PDF</button>
+    </div>
+    <div class="repayment-container">
+      <div id="repaymentInputs"></div>
+    </div>
+    <div class="summary">
+      <div id="totalRepaid">Total Repaid: €0</div>
+      <div id="finalBalance">Final Balance: €0</div>
+      <div id="remaining">Remaining: €0</div>
+      <div id="lowestWeek">Lowest Week: --</div>
+    </div>
+    <div class="chart-controls">
+      <label>Chart Type:
+        <select id="chartType">
+          <option value="line">Line</option>
+          <option value="bar">Bar</option>
+          <option value="pie">Pie</option>
+        </select>
+      </label>
+      <label>
+        <input type="checkbox" id="toggleRepayments" checked>
+        Show Repayments Overlay
+      </label>
+      <button id="resetZoom">Reset Zoom</button>
+      <button id="exportPNG">Export Chart as PNG</button>
+    </div>
+    <div class="chart-wrapper">
+      <canvas id="chartCanvas"></canvas>
+    </div>
+
+    <!-- Collapsible Spreadsheet Section -->
+    <div class="collapsible-section">
+      <button class="toggle-btn" onclick="toggleTableSummary()" id="toggleTableBtn">Show Full Spreadsheet Table</button>
+      <div id="spreadsheetSummarySection">
+        <!-- Rendered by JS: week labels, income, rolling balance -->
+      </div>
+      <div id="spreadsheetTableSection" style="display:none;">
+        <div id="spreadsheetTable"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.2.2/dist/chartjs-plugin-annotation.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="script.js"></script>
+  <script>
+    // Collapsible Table Section Logic
+    let showingFullTable = false;
+    function toggleTableSummary() {
+      showingFullTable = !showingFullTable;
+      document.getElementById('spreadsheetTableSection').style.display = showingFullTable ? '' : 'none';
+      document.getElementById('spreadsheetSummarySection').style.display = showingFullTable ? 'none' : '';
+      document.getElementById('toggleTableBtn').textContent = showingFullTable ? "Hide Full Spreadsheet Table" : "Show Full Spreadsheet Table";
+    }
+    // Auto-show summary on load (default)
+    document.addEventListener('DOMContentLoaded', () => {
+      showingFullTable = false;
+      document.getElementById('spreadsheetTableSection').style.display = 'none';
+      document.getElementById('spreadsheetSummarySection').style.display = '';
+    });
+  </script>
+</body>
+</html>
