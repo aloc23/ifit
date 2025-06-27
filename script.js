@@ -1,4 +1,4 @@
-// --- Cashflow Forecast Tool: Spreadsheet-Perfect Alignment from Week Columns Onward ---
+// --- Cashflow Forecast Tool: Ensures Spreadsheet-Perfect Weekly Income and Rolling Cash Alignment ---
 
 let rawData = [];
 let chart;
@@ -26,7 +26,6 @@ const chartTypeSelect = document.getElementById('chartType');
 const toggleRepaymentsChk = document.getElementById('toggleRepayments');
 const resetZoomBtn = document.getElementById('resetZoom');
 
-// --- Event Listeners ---
 fileInput.addEventListener('change', handleFile);
 addRepaymentBtn.addEventListener('click', addRepaymentRow);
 clearRepaymentsBtn.addEventListener('click', clearRepayments);
@@ -64,7 +63,7 @@ function findRepaymentRowIndex() {
   return findRowIndex("Mayweather Investment Repayment (Investment 1 and 2)");
 }
 
-// --- Week Column Detection: Start from first "Week N =" column (e.g. CH) ---
+// --- Detect week columns: Start from first "Week N =" column (e.g. CH) ---
 function extractWeekOptions(data) {
   const weeksRow = data[weeksHeaderRowIdx] || [];
   weekOptions = [];
@@ -83,14 +82,17 @@ function extractWeekOptions(data) {
 
 function computeWeeklyIncomes() {
   // For each week column, sum from startRow to endRow
-  return weekOptions.map(w => {
+  let weeklyIncome = [];
+  for (let w = 0; w < weekOptions.length; w++) {
+    const weekCol = weekOptions[w].index;
     let sum = 0;
     for (let r = startRow; r <= endRow; r++) {
-      const val = parseFloat(rawData[r]?.[w.index] || 0);
+      const val = parseFloat(rawData[r]?.[weekCol] || 0);
       if (!isNaN(val)) sum += val;
     }
-    return sum;
-  });
+    weeklyIncome.push(sum);
+  }
+  return weeklyIncome;
 }
 
 // --- Repayments: get and set ---
@@ -123,23 +125,19 @@ function getRepaymentData() {
 }
 
 // --- Rolling Cash Balance: Spreadsheet logic ---
-// rollingCash[0] = previous col's rolling cash (row) + previous row, this col (week 1)
-// rollingCash[N] = rollingCash[N-1] + previous row, this col (week N)
+// rolling[N] = rolling[N-1] + value in previous row, this col, except for first col: use previous col, rolling row + prev row, this col
 function computeRollingCashArr() {
   const rollingRowIdx = findRowIndex("Rolling cash balance");
   if (rollingRowIdx === -1) return weekOptions.map(() => 0);
   let rollingBalance = [];
   for (let w = 0; w < weekOptions.length; w++) {
     const weekCol = weekOptions[w].index;
+    const prevRowVal = parseFloat(rawData[rollingRowIdx-1][weekCol] || 0);
     if (w === 0) {
-      // Get value from previous col, same row
       const prevColBal = parseFloat(rawData[rollingRowIdx][weekCol - 1]) || 0;
-      // Add value from previous row, this col
-      const prevRowVal = parseFloat(rawData[rollingRowIdx - 1][weekCol] || 0);
       rollingBalance.push(prevColBal + prevRowVal);
     } else {
-      const prevRowVal = parseFloat(rawData[rollingRowIdx - 1][weekCol] || 0);
-      rollingBalance.push(rollingBalance[w - 1] + prevRowVal);
+      rollingBalance.push(rollingBalance[w-1] + prevRowVal);
     }
   }
   return rollingBalance;
@@ -394,7 +392,7 @@ function renderTable(repaymentData = null, balanceArr = null, incomeArr = null) 
     const row = rawData[rowIndex];
     const tr = document.createElement('tr');
     row.forEach((cell, cellIndex) => {
-      // Only render week columns and before (skip F–CG)
+      // Only render week columns and after; skip columns before first week column
       if (cellIndex < weekOptions[0].index) return;
       const td = document.createElement('td');
       td.style.border = '1px solid #ccc';
