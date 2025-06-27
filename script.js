@@ -1,4 +1,4 @@
-// --- Cashflow Forecast Tool: Ensure Weekly Income/Balance matches Spreadsheet precisely ---
+// --- Cashflow Forecast Tool: Spreadsheet-Perfect Alignment from Week Columns Onward ---
 
 let rawData = [];
 let chart;
@@ -7,9 +7,12 @@ let chartType = 'line';
 let showRepayments = true;
 let lowestWeekCache = { value: null, index: null, label: null };
 
+// Adjust these to match your sheet's actual structure!
 const LABEL_COL = 1; // Column B (index 1) for all label lookups
+const weeksHeaderRowIdx = 3; // Usually header is on row 4 (0-based index 3)
+const startRow = 4;  // CH5 in Excel (row 5, 0-based index 4)
+const endRow = 269;  // CH270 in Excel (row 270, 0-based index 269)
 
-// DOM Elements
 const fileInput = document.getElementById('fileInput');
 const addRepaymentBtn = document.getElementById('addRepayment');
 const clearRepaymentsBtn = document.getElementById('clearRepayments');
@@ -23,7 +26,7 @@ const chartTypeSelect = document.getElementById('chartType');
 const toggleRepaymentsChk = document.getElementById('toggleRepayments');
 const resetZoomBtn = document.getElementById('resetZoom');
 
-// Attach event listeners
+// --- Event Listeners ---
 fileInput.addEventListener('change', handleFile);
 addRepaymentBtn.addEventListener('click', addRepaymentRow);
 clearRepaymentsBtn.addEventListener('click', clearRepayments);
@@ -44,7 +47,7 @@ resetZoomBtn.addEventListener('click', function() {
   if (chart && chart.resetZoom) chart.resetZoom();
 });
 
-// --- Helper: Find the row index by label (case-insensitive, col B) ---
+// --- Helpers ---
 function findRowIndex(label) {
   label = label.trim().toLowerCase();
   let idx = rawData.findIndex(row =>
@@ -61,27 +64,25 @@ function findRepaymentRowIndex() {
   return findRowIndex("Mayweather Investment Repayment (Investment 1 and 2)");
 }
 
-// --- Dynamically detect week columns using regex in header row ---
+// --- Week Column Detection: Start from first "Week N =" column (e.g. CH) ---
 function extractWeekOptions(data) {
-  const weeksRow = data[3] || [];
+  const weeksRow = data[weeksHeaderRowIdx] || [];
   weekOptions = [];
-  // Find first column whose header matches "Week N = ..."
-  let firstWeekCol = weeksRow.findIndex(cell => typeof cell === 'string' && /week\s*\d+\s*=/i.test(cell));
-  if (firstWeekCol === -1) firstWeekCol = 5; // fallback
+  let firstWeekCol = weeksRow.findIndex(cell => typeof cell === 'string' && /^Week\s*\d+\s*=/i.test(cell));
+  if (firstWeekCol === -1) {
+    alert("Could not find week columns. Check your spreadsheet headers!");
+    return;
+  }
   for (let i = firstWeekCol; i < weeksRow.length; i++) {
     const label = typeof weeksRow[i] === 'string' ? weeksRow[i].trim() : '';
-    if (label && /week\s*\d+\s*=/i.test(label)) {
+    if (label && /^Week\s*\d+\s*=/i.test(label)) {
       weekOptions.push({ index: i, label: label });
     }
   }
 }
 
-// --- Use the exact row range as in the spreadsheet for sums ---
-// You may need to update startRow/endRow for your real sheet
-const startRow = 5, endRow = 22; // <-- <--- ADJUST THIS TO MATCH YOUR SHEET! (use e.g. 5, 270 or as per your SUM formula)
-
-// --- Weekly income matches SUM in spreadsheet for each week ---
 function computeWeeklyIncomes() {
+  // For each week column, sum from startRow to endRow
   return weekOptions.map(w => {
     let sum = 0;
     for (let r = startRow; r <= endRow; r++) {
@@ -92,7 +93,7 @@ function computeWeeklyIncomes() {
   });
 }
 
-// --- Repayment chart data (absolute value per week) ---
+// --- Repayments: get and set ---
 function getRepaymentsArr() {
   const repayRow = findRepaymentRowIndex();
   if (repayRow === -1) return weekOptions.map(() => 0);
@@ -101,16 +102,12 @@ function getRepaymentsArr() {
     return Math.abs(val) || 0;
   });
 }
-
-// --- Write repayment (negative) into the correct cell in rawData ---
 function setRepaymentForWeek(weekIdx, amount) {
   const repayRow = findRepaymentRowIndex();
   if (repayRow !== -1) {
     rawData[repayRow][weekIdx] = amount > 0 ? -Math.abs(amount) : amount;
   }
 }
-
-// --- UI Repayment: update spreadsheet and sum ---
 function getRepaymentData() {
   let totalRepayment = 0;
   document.querySelectorAll('.repayment-row').forEach(row => {
@@ -125,49 +122,57 @@ function getRepaymentData() {
   return { repaymentsArr, totalRepayment };
 }
 
-// --- Rolling cash: base + sum(week0) + sum(week1) + ... ---
-function computeRollingCashArr(weeklyIncomes, baseValue) {
-  let arr = [];
-  let prev = baseValue;
-  for (let i = 0; i < weeklyIncomes.length; i++) {
-    const cur = prev + weeklyIncomes[i];
-    arr.push(cur);
-    prev = cur;
+// --- Rolling Cash Balance: Spreadsheet logic ---
+// rollingCash[0] = previous col's rolling cash (row) + previous row, this col (week 1)
+// rollingCash[N] = rollingCash[N-1] + previous row, this col (week N)
+function computeRollingCashArr() {
+  const rollingRowIdx = findRowIndex("Rolling cash balance");
+  if (rollingRowIdx === -1) return weekOptions.map(() => 0);
+  let rollingBalance = [];
+  for (let w = 0; w < weekOptions.length; w++) {
+    const weekCol = weekOptions[w].index;
+    if (w === 0) {
+      // Get value from previous col, same row
+      const prevColBal = parseFloat(rawData[rollingRowIdx][weekCol - 1]) || 0;
+      // Add value from previous row, this col
+      const prevRowVal = parseFloat(rawData[rollingRowIdx - 1][weekCol] || 0);
+      rollingBalance.push(prevColBal + prevRowVal);
+    } else {
+      const prevRowVal = parseFloat(rawData[rollingRowIdx - 1][weekCol] || 0);
+      rollingBalance.push(rollingBalance[w - 1] + prevRowVal);
+    }
   }
-  return arr;
+  return rollingBalance;
 }
 
-// --- MAIN RECALC/RENDER ---
 function recalculateAndRender() {
   if (weekOptions.length === 0 || rawData.length === 0) return;
   const { repaymentsArr, totalRepayment } = getRepaymentData();
-  // Set this to your real opening balance (matches Excel)
-  const baseValue = parseFloat(rawData[findRowIndex('Rolling cash balance')]?.[weekOptions[0].index - 1]) || 355000;
-  const incomeArr = computeWeeklyIncomes();
-  const rollingBalanceArr = computeRollingCashArr(incomeArr, baseValue);
+  const weeklyIncome = computeWeeklyIncomes();
+  const rollingBalance = computeRollingCashArr();
 
   // Find lowest week
   let lowestWeek = { value: Infinity, index: null, label: '' };
-  for (let i = 0; i < rollingBalanceArr.length; i++) {
-    if (rollingBalanceArr[i] < lowestWeek.value) {
-      lowestWeek.value = rollingBalanceArr[i];
+  for (let i = 0; i < rollingBalance.length; i++) {
+    if (rollingBalance[i] < lowestWeek.value) {
+      lowestWeek.value = rollingBalance[i];
       lowestWeek.index = i;
       lowestWeek.label = weekOptions[i].label;
     }
   }
   lowestWeekCache = lowestWeek;
 
-  document.getElementById('remaining').textContent = `Remaining: €${(baseValue - totalRepayment).toLocaleString()}`;
+  // The "remaining" and "final balance" are now the last rolling balance
+  document.getElementById('remaining').textContent = `Remaining: €${(rollingBalance[rollingBalance.length-1]||0).toLocaleString()}`;
   document.getElementById('totalRepaid').textContent = `Total Repaid: €${totalRepayment.toLocaleString()}`;
-  document.getElementById('finalBalance').textContent = `Final Balance: €${(baseValue - totalRepayment).toLocaleString()}`;
+  document.getElementById('finalBalance').textContent = `Final Balance: €${(rollingBalance[rollingBalance.length-1]||0).toLocaleString()}`;
   document.getElementById('lowestWeek').textContent = `Lowest Week: ${lowestWeek.label}`;
 
-  renderChart(rollingBalanceArr, repaymentsArr, incomeArr);
-  renderSpreadsheetSummary(incomeArr, rollingBalanceArr);
-  renderTable(repaymentsArr, rollingBalanceArr, incomeArr);
+  renderChart(rollingBalance, repaymentsArr, weeklyIncome);
+  renderSpreadsheetSummary(weeklyIncome, rollingBalance);
+  renderTable(repaymentsArr, rollingBalance, weeklyIncome);
 }
 
-// --- FILE HANDLING ---
 function handleFile(event) {
   const reader = new FileReader();
   reader.onload = function (e) {
@@ -215,7 +220,6 @@ function addRepaymentRow(weekIndex = null, amount = null) {
 
 function clearRepayments() {
   repaymentInputs.innerHTML = '';
-  // Clear all repayments from spreadsheet row
   const repayRow = findRepaymentRowIndex();
   if (repayRow !== -1) {
     weekOptions.forEach(w => {
@@ -225,14 +229,13 @@ function clearRepayments() {
   recalculateAndRender();
 }
 
-// --- CHART ---
 function renderChart(cashflowData = null, repaymentData = null, incomeData = null) {
   const ctx = document.getElementById('chartCanvas').getContext('2d');
   if (chart) chart.destroy();
 
   let datasets = [{
     label: 'Rolling Cash Balance',
-    data: cashflowData ? cashflowData : Array(weekOptions.length).fill(355000),
+    data: cashflowData ? cashflowData : weekOptions.map(() => 0),
     borderColor: '#0077cc',
     backgroundColor: chartType === 'bar' ? '#b3d7f6' : 'rgba(0, 119, 204, 0.09)',
     borderWidth: 2,
@@ -323,7 +326,6 @@ function renderChart(cashflowData = null, repaymentData = null, incomeData = nul
   });
 }
 
-// --- Summary Table: week labels, income, rolling balance ---
 function renderSpreadsheetSummary(incomeArr, balanceArr) {
   const section = document.getElementById('spreadsheetSummarySection');
   section.innerHTML = "";
@@ -376,7 +378,6 @@ function renderSpreadsheetSummary(incomeArr, balanceArr) {
   section.appendChild(div);
 }
 
-// --- Full Table: shows up to "Rolling cash balance" row, then computed income and balance rows ---
 function renderTable(repaymentData = null, balanceArr = null, incomeArr = null) {
   const oldTable = document.getElementById('spreadsheetTable');
   if (oldTable) oldTable.innerHTML = "";
@@ -393,10 +394,11 @@ function renderTable(repaymentData = null, balanceArr = null, incomeArr = null) 
     const row = rawData[rowIndex];
     const tr = document.createElement('tr');
     row.forEach((cell, cellIndex) => {
+      // Only render week columns and before (skip F–CG)
+      if (cellIndex < weekOptions[0].index) return;
       const td = document.createElement('td');
       td.style.border = '1px solid #ccc';
       td.style.padding = '4px 6px';
-      // Repayment row highlight
       if (rowIndex === findRepaymentRowIndex() && weekOptions.some(w => w.index === cellIndex) && cell && cell !== '') {
         td.className = 'repayment-highlight';
       }
@@ -406,7 +408,7 @@ function renderTable(repaymentData = null, balanceArr = null, incomeArr = null) 
     table.appendChild(tr);
   }
 
-  // Add a row for computed weekly income
+  // Add a row for weekly income
   if (incomeArr) {
     const trIncome = document.createElement('tr');
     trIncome.className = 'balance-row';
@@ -419,7 +421,7 @@ function renderTable(repaymentData = null, balanceArr = null, incomeArr = null) 
     table.appendChild(trIncome);
   }
 
-  // Add a row for computed rolling balance
+  // Add a row for rolling balance
   if (balanceArr) {
     const trBal = document.createElement('tr');
     trBal.className = 'balance-row';
@@ -435,14 +437,13 @@ function renderTable(repaymentData = null, balanceArr = null, incomeArr = null) 
   document.getElementById('spreadsheetTable').appendChild(table);
 }
 
-// --- Export/Save/Load Functions (unchanged) ---
+// --- Export/Save/Load Functions ---
 function exportToExcel() {
   const ws = XLSX.utils.aoa_to_sheet(rawData);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
   XLSX.writeFile(wb, "repayment_data.xlsx");
 }
-
 function exportToPDF() {
   const container = document.querySelector('.container');
   html2canvas(container).then(canvas => {
@@ -457,7 +458,6 @@ function exportToPDF() {
     pdf.save("repayment_summary.pdf");
   });
 }
-
 function exportChartPNG() {
   const canvas = document.getElementById('chartCanvas');
   const link = document.createElement('a');
@@ -465,7 +465,6 @@ function exportChartPNG() {
   link.download = 'cashflow_chart.png';
   link.click();
 }
-
 function savePlan() {
   const repayments = [];
   document.querySelectorAll('.repayment-row').forEach(row => {
@@ -477,7 +476,6 @@ function savePlan() {
   localStorage.setItem('repaymentPlan', JSON.stringify(repayments));
   alert('Repayment plan saved!');
 }
-
 function loadPlan() {
   const repayments = JSON.parse(localStorage.getItem('repaymentPlan') || '[]');
   repaymentInputs.innerHTML = '';
@@ -487,7 +485,7 @@ function loadPlan() {
   recalculateAndRender();
 }
 
-// --- UI/UX: Autofocus, Enter-to-add-row, Library loaded check ---
+// --- UI/UX Improvements ---
 repaymentInputs.addEventListener('DOMNodeInserted', e => {
   if (e.target.classList && e.target.classList.contains('repayment-row')) {
     const input = e.target.querySelector('input[type="number"]');
