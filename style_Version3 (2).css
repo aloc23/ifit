@@ -1,0 +1,218 @@
+body {
+  font-family: 'Segoe UI', 'Arial', sans-serif;
+  background: #f4f8fb;
+  margin: 0;
+  padding: 0;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 32px auto;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 32px rgba(20,50,120,0.10);
+  padding: 36px 36px 28px 36px;
+}
+
+h1 {
+  margin-top: 0;
+  color: #0077cc;
+  font-size: 2.2rem;
+  font-weight: 600;
+  letter-spacing: -1px;
+}
+
+input[type="file"] {
+  margin-bottom: 20px;
+}
+
+.repayment-controls {
+  margin-bottom: 18px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.repayment-container {
+  margin-bottom: 12px;
+}
+
+.repayment-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+  align-items: center;
+}
+
+.repayment-row select,
+.repayment-row input {
+  font-size: 15px;
+  padding: 6px 8px;
+  border-radius: 5px;
+  border: 1px solid #bbb;
+  background: #f8fafd;
+}
+
+.repayment-row input[type="number"] {
+  width: 120px;
+}
+
+.summary {
+  margin-top: 18px;
+  display: flex;
+  gap: 36px;
+  font-size: 1.07em;
+  flex-wrap: wrap;
+}
+
+.summary div {
+  background: #f6fafd;
+  border-radius: 5px;
+  padding: 6px 18px;
+  box-shadow: 0 1px 5px rgba(180,200,220,0.04);
+  margin-bottom: 6px;
+}
+
+.chart-controls {
+  margin: 24px 0 10px 0;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.chart-controls select,
+.chart-controls input[type="checkbox"] {
+  font-size: 15px;
+  margin-left: 4px;
+}
+
+.chart-controls button,
+.toggle-btn {
+  padding: 5px 14px;
+  font-size: 15px;
+  border-radius: 5px;
+  background: #f7fbff;
+  border: 1px solid #b6daff;
+  color: #0077cc;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.chart-controls button:hover,
+.toggle-btn:hover {
+  background: #e8f4ff;
+  color: #005fa3;
+}
+
+.chart-wrapper {
+  width: 100%;
+  max-width: 950px;
+  height: 350px;
+  max-height: 420px;
+  margin: 0 auto 30px auto;
+  background: #f8fafd;
+  border-radius: 10px;
+  box-shadow: 0 1px 8px rgba(20,50,120,0.05);
+  padding: 10px 8px 16px 8px;
+}
+
+#chartCanvas {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 950px;
+  max-height: 410px;
+  display: block;
+}
+
+#spreadsheetTable {
+  margin-top: 22px;
+  max-width: 97vw;
+  max-height: 320px;
+  overflow-x: auto;
+  overflow-y: auto;
+  background: white;
+  padding: 14px 9px 10px 9px;
+  border: 1px solid #dbeaff;
+  border-radius: 8px;
+}
+
+table {
+  font-size: 14px;
+}
+
+.editable-cell input {
+  width: 100%;
+  border: none;
+  background: #f5faff;
+  font-size: 14px;
+  padding: 3px 5px;
+  box-sizing: border-box;
+  border-radius: 3px;
+}
+
+.editable-cell input:focus {
+  outline: 2px solid #0077cc;
+  background: #e6f3ff;
+}
+
+.repayment-highlight {
+  background: #fff7e0 !important;
+}
+
+.balance-row {
+  background: #e4ffe4 !important;
+  font-weight: bold;
+  text-align: center;
+  color: #126118;
+}
+
+.collapsible-section { margin-bottom: 24px; }
+.toggle-btn {
+  background: #f2f7ff;
+  border: 1px solid #b6daff;
+  color: #0077cc;
+  border-radius: 5px;
+  padding: 6px 15px;
+  font-size: 15px;
+  cursor: pointer;
+  margin-bottom: 10px;
+  margin-top: 8px;
+  transition: background .18s, color .18s;
+}
+.toggle-btn:hover { background: #e1efff; color: #005fa3; }
+.spreadsheet-summary-table th,
+.spreadsheet-summary-table td {
+  text-align: center;
+  padding: 4px 8px;
+  border: 1px solid #dbeaff;
+}
+.spreadsheet-summary-table th {
+  background: #f0f7ff;
+  font-weight: 500;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+}
+.spreadsheet-summary-table { border-collapse: collapse; width: 100%; }
+.spreadsheet-summary-table .balance-row { background: #e4ffe4; font-weight: bold;}
+.spreadsheet-summary-table .week-label-row td { background: #f7fbff; font-weight: 500;}
+.spreadsheet-summary-table .sticky-week-label { background: #eaf5ff; position: sticky; left: 0; z-index: 1;}
+.spreadsheet-summary-scroll { overflow-x: auto; max-width: 98vw; }
+@media (max-width: 900px) { .spreadsheet-summary-scroll { font-size: 12px; } }
+
+/* Responsive tweaks */
+@media (max-width: 600px) {
+  .container { padding: 8px; }
+  .chart-wrapper { padding: 2px; }
+  .summary { gap: 12px; flex-direction: column; }
+  .chart-controls { gap: 6px; }
+}
+
+/* Repayment inputs visually grouped */
+.repayment-container {
+  background: #f8fafd;
+  border-radius: 8px;
+  padding: 10px 8px 8px 8px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 4px rgba(20,50,120,0.05);
+}
