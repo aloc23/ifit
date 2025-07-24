@@ -41,34 +41,22 @@
     .spreadsheet-summary-scroll { overflow-x: auto; max-width: 98vw; }
     @media (max-width: 900px) { .spreadsheet-summary-scroll { font-size: 12px; } }
 
-    /* Filtering controls styling */
-    #filterControls {
+    /* Week filter controls styling */
+    #weekFilterControls {
       margin-bottom: 1em;
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       gap: 1em;
     }
-    #filterControls label {
+    #weekFilterControls label {
       font-weight: 500;
       margin-right: 3px;
     }
-    #filterControls select {
+    #weekFilterControls select {
       min-width: 120px;
       margin-right: 8px;
       padding: 2px 6px;
-    }
-    #repaymentChart {
-      margin-top: 18px;
-      max-width: 900px;
-      width: 100%;
-      background: #f8fcff;
-      border: 1px solid #dbeaff;
-      border-radius: 5px;
-      min-height: 320px;
-    }
-    #summaryTableBody td, #summaryTableBody th {
-      padding: 4px 10px;
     }
   </style>
 </head>
@@ -83,6 +71,12 @@
       <button id="loadPlan">📂 Load Plan</button>
       <button id="exportExcel">Export to Excel</button>
       <button id="exportPDF">Export to PDF</button>
+    </div>
+    <div id="weekFilterControls" style="display:none;">
+      <label for="startWeekSelect">From week:</label>
+      <select id="startWeekSelect"></select>
+      <label for="endWeekSelect">To week:</label>
+      <select id="endWeekSelect"></select>
     </div>
     <div class="repayment-container">
       <div id="repaymentInputs"></div>
@@ -111,24 +105,6 @@
     <div class="chart-wrapper">
       <canvas id="chartCanvas"></canvas>
     </div>
-
-    <!-- Filtering Controls for Monthly/Loan Data -->
-    <div id="filterControls">
-      <label for="loanSelect"><strong>Loan:</strong></label>
-      <select id="loanSelect">
-        <option value="__all__">All Loans</option>
-      </select>
-      <label for="startMonth"><strong>From:</strong></label>
-      <select id="startMonth"></select>
-      <label for="endMonth"><strong>To:</strong></label>
-      <select id="endMonth"></select>
-    </div>
-    <table style="margin-bottom:1em;">
-      <thead><tr><th>Month</th><th>Total Repayments</th></tr></thead>
-      <tbody id="summaryTableBody"></tbody>
-    </table>
-    <canvas id="repaymentChart" width="900" height="350"></canvas>
-
     <!-- Collapsible Spreadsheet Section -->
     <div class="collapsible-section">
       <button class="toggle-btn" onclick="toggleTableSummary()" id="toggleTableBtn">Show Full Spreadsheet Table</button>
