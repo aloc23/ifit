@@ -7,6 +7,12 @@ let chartType = 'line';
 let showRepayments = true;
 let lowestWeekCache = { value: null, index: null, label: null };
 
+// Filtering controls (for monthly/loan filtering if present)
+let allMonths = [];
+let allLoans = [];
+let allMonthlyTotals = {};
+let allPerLoanMonthly = {};
+
 // Adjust these to match your sheet's actual structure!
 const LABEL_COL = 1; // Column B (index 1) for all label lookups
 const weeksHeaderRowIdx = 3; // Usually header is on row 4 (0-based index 3)
@@ -25,6 +31,11 @@ const repaymentInputs = document.getElementById('repaymentInputs');
 const chartTypeSelect = document.getElementById('chartType');
 const toggleRepaymentsChk = document.getElementById('toggleRepayments');
 const resetZoomBtn = document.getElementById('resetZoom');
+
+// Filtering controls (add these to your HTML if not present)
+const loanSelect = document.getElementById('loanSelect');
+const startMonth = document.getElementById('startMonth');
+const endMonth = document.getElementById('endMonth');
 
 fileInput.addEventListener('change', handleFile);
 addRepaymentBtn.addEventListener('click', addRepaymentRow);
@@ -125,7 +136,6 @@ function getRepaymentData() {
 }
 
 // --- Rolling Cash Balance: Spreadsheet logic ---
-// rolling[N] = rolling[N-1] + value in previous row, this col, except for first col: use previous col, rolling row + prev row, this col
 function computeRollingCashArr() {
   const rollingRowIdx = findRowIndex("Rolling cash balance");
   if (rollingRowIdx === -1) return weekOptions.map(() => 0);
@@ -169,6 +179,13 @@ function recalculateAndRender() {
   renderChart(rollingBalance, repaymentsArr, weeklyIncome);
   renderSpreadsheetSummary(weeklyIncome, rollingBalance);
   renderTable(repaymentsArr, rollingBalance, weeklyIncome);
+
+  // Filtering controls: update summary/chart if present
+  if (loanSelect && startMonth && endMonth) {
+    const filtered = getFilteredMonthlyTotals();
+    updateSummaryTable(filtered);
+    updateRepaymentChart(filtered);
+  }
 }
 
 function handleFile(event) {
@@ -185,10 +202,191 @@ function handleFile(event) {
     renderSpreadsheetSummary([], []);
     clearRepayments();
     recalculateAndRender();
+
+    // If using monthly/loan filtering, attempt to parse for those as well
+    parseRepaymentsByMonthFile(sheet);
   };
   reader.readAsArrayBuffer(event.target.files[0]);
 }
 
+// --- Filtering/Monthly/Lending Controls & Logic ---
+function normalizeMonthLabel(label) {
+  const months = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+  let m = label.match(/^([A-Za-z]+)\s*(\d{2,4})$/);
+  if (m) {
+    let month = months.indexOf(m[1].toLowerCase()) + 1;
+    let year = parseInt(m[2], 10);
+    if (year < 100) year += 2000;
+    return `${year}-${month.toString().padStart(2,'0')}`;
+  }
+  m = label.match(/^(\d{4})[-\/](\d{1,2})/);
+  if (m) {
+    return `${m[1]}-${m[2].padStart(2,'0')}`;
+  }
+  return label;
+}
+
+// Parse repayments by month/account from a worksheet object (SheetJS)
+function parseRepaymentsByMonthFile(sheet) {
+  try {
+    const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+    if (!json.length) return;
+    const headers = json[0];
+    // Assume first column is label, rest are months
+    const dateCols = headers.slice(1).map(normalizeMonthLabel);
+
+    const monthlyTotals = {};
+    const perLoanMonthly = {};
+
+    for (let i = 1; i < json.length; ++i) {
+      const row = json[i];
+      if (!row || !row[0]) continue;
+      const loan = String(row[0]).trim();
+      perLoanMonthly[loan] = {};
+      for (let j = 1; j < row.length; ++j) {
+        const month = dateCols[j-1];
+        const val = parseFloat(row[j]);
+        if (!isNaN(val)) {
+          perLoanMonthly[loan][month] = (perLoanMonthly[loan][month] || 0) + val;
+          monthlyTotals[month] = (monthlyTotals[month] || 0) + val;
+        }
+      }
+    }
+    allMonthlyTotals = monthlyTotals;
+    allPerLoanMonthly = perLoanMonthly;
+    populateFilterControls(perLoanMonthly, monthlyTotals);
+    setupFilterListeners();
+    // Initial render
+    const filtered = getFilteredMonthlyTotals();
+    updateSummaryTable(filtered);
+    updateRepaymentChart(filtered);
+  } catch (err) {
+    // Silently fail, don't block main tool
+  }
+}
+
+// --- Filtering controls: populate and handle ---
+function populateFilterControls(perLoanMonthly, monthlyTotals) {
+  // Loans
+  if (!loanSelect || !startMonth || !endMonth) return;
+  allLoans = Object.keys(perLoanMonthly);
+  loanSelect.innerHTML = '<option value="__all__">All Loans</option>';
+  allLoans.forEach(loan => {
+    const opt = document.createElement('option');
+    opt.value = loan;
+    opt.textContent = loan;
+    loanSelect.appendChild(opt);
+  });
+
+  // Months (from all months in data)
+  allMonths = Array.from(
+    new Set(
+      Object.values(perLoanMonthly).flatMap(m => Object.keys(m))
+    )
+  ).concat(Object.keys(monthlyTotals))
+   .filter((v,i,a)=>a.indexOf(v)==i)
+   .sort();
+
+  startMonth.innerHTML = '';
+  endMonth.innerHTML = '';
+  allMonths.forEach(month => {
+    const o1 = document.createElement('option');
+    o1.value = month; o1.textContent = month;
+    const o2 = o1.cloneNode(true);
+    startMonth.appendChild(o1);
+    endMonth.appendChild(o2);
+  });
+  // Set defaults
+  startMonth.selectedIndex = 0;
+  endMonth.selectedIndex = allMonths.length - 1;
+}
+
+function getFilteredMonthlyTotals() {
+  if (!loanSelect || !startMonth || !endMonth) return {};
+  const loan = loanSelect.value;
+  const start = startMonth.value;
+  const end = endMonth.value;
+  let months = allMonths
+    .filter(m => m >= start && m <= end);
+
+  let filtered = {};
+  if (loan === "__all__") {
+    months.forEach(month => {
+      filtered[month] = allMonthlyTotals[month] || 0;
+    });
+  } else {
+    months.forEach(month => {
+      filtered[month] = (allPerLoanMonthly[loan] && allPerLoanMonthly[loan][month]) || 0;
+    });
+  }
+  return filtered;
+}
+
+function setupFilterListeners() {
+  if (!loanSelect || !startMonth || !endMonth) return;
+  ['loanSelect','startMonth','endMonth'].forEach(id => {
+    document.getElementById(id).addEventListener('change', () => {
+      const filtered = getFilteredMonthlyTotals();
+      updateSummaryTable(filtered);
+      updateRepaymentChart(filtered);
+    });
+  });
+}
+
+// --- Summary table and chart for filtered results ---
+let repaymentChart;
+function updateSummaryTable(monthlyTotals) {
+  const tbody = document.getElementById('summaryTableBody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  const months = Object.keys(monthlyTotals).sort();
+  for (const month of months) {
+    const tr = document.createElement('tr');
+    const tdMonth = document.createElement('td');
+    tdMonth.textContent = month;
+    const tdTotal = document.createElement('td');
+    tdTotal.textContent = monthlyTotals[month].toLocaleString(undefined, {minimumFractionDigits: 2});
+    tr.appendChild(tdMonth);
+    tr.appendChild(tdTotal);
+    tbody.appendChild(tr);
+  }
+}
+function updateRepaymentChart(monthlyTotals) {
+  const canvas = document.getElementById('repaymentChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const months = Object.keys(monthlyTotals).sort();
+  const data = months.map(m => monthlyTotals[m]);
+  if (repaymentChart) {
+    repaymentChart.data.labels = months;
+    repaymentChart.data.datasets[0].data = data;
+    repaymentChart.update();
+  } else {
+    repaymentChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: months,
+        datasets: [{
+          label: 'Total Repayments',
+          data: data,
+          backgroundColor: 'rgba(54, 162, 235, 0.6)'
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          title: { display: true, text: 'Monthly Repayment Totals' }
+        },
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    });
+  }
+}
+
+// --- Repayment input rows and core logic ---
 function addRepaymentRow(weekIndex = null, amount = null) {
   const row = document.createElement('div');
   row.className = 'repayment-row';
