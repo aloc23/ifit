@@ -1,4 +1,4 @@
-// --- Cashflow Forecast Tool: Final Version, Weekly Income & Rolling Cash Balance from Row 5 Down Only ---
+// --- Cashflow Forecast Tool: Final Version, Matches Spreadsheet Rolling Cash with Starting Balance ---
 
 let rawData = [];
 let chart;
@@ -14,8 +14,8 @@ let weekFilterRange = [0, 0];
 // Sheet structure (adjust if your sheet is different)
 const LABEL_COL = 1; // Column B (index 1) for label lookups
 const weeksHeaderRowIdx = 3; // Header row (index 3, i.e. Excel row 4)
-const startRow = 4;  // Data starts at CH5 (Excel row 5, index 4)
-const endRow = 269;  // Data ends at CH270 (Excel row 270, index 269)
+const startRow = 4;  // CH5 in Excel (row 5, 0-based index 4)
+const endRow = 269;  // CH270 in Excel (row 270, 0-based index 269)
 const firstWeekCol = 5; // Column F (index 5)
 
 const fileInput = document.getElementById('fileInput');
@@ -33,6 +33,20 @@ const resetZoomBtn = document.getElementById('resetZoom');
 const weekFilterControls = document.getElementById('weekFilterControls');
 const startWeekSelect = document.getElementById('startWeekSelect');
 const endWeekSelect = document.getElementById('endWeekSelect');
+
+// For starting balance
+let startingBalance = 0;
+const startingBalanceInput = document.createElement('input');
+startingBalanceInput.type = 'number';
+startingBalanceInput.id = 'startingBalanceInput';
+startingBalanceInput.placeholder = 'Starting Balance (matches your sheet)';
+startingBalanceInput.style.margin = '0 8px 0 0';
+startingBalanceInput.style.width = '180px';
+startingBalanceInput.addEventListener('input', () => {
+  startingBalance = parseFloat(startingBalanceInput.value) || 0;
+  recalculateAndRender();
+});
+document.querySelector('.repayment-controls').insertBefore(startingBalanceInput, fileInput.nextSibling);
 
 fileInput.addEventListener('change', handleFile);
 addRepaymentBtn.addEventListener('click', addRepaymentRow);
@@ -135,13 +149,13 @@ function getRepaymentData(filtered = false) {
 }
 
 // --- Rolling Cash Balance: always matches spreadsheet logic ---
-// For filtered views, starts from correct prior rolling balance
+// For filtered views, starts from correct prior rolling balance or user starting balance
 function computeRollingCashArr(filtered = false) {
   let sIdx = filtered ? weekFilterRange[0] : 0;
-  let eIdx = filtered ? weekFilterRange[1] : weekOptions.length-1;
+  let eIdx = filtered ? weekFilterRange[1] : weekOptions.length - 1;
 
-  // Compute the sum for each week from row 5 down
-  let allWeeklySums = weekOptions.map((w, i) => {
+  // Calculate weekly sums for ALL weeks, from row 5 down
+  let allWeeklySums = weekOptions.map(w => {
     let sum = 0;
     for (let r = startRow; r <= endRow; r++) {
       const val = parseFloat(rawData[r]?.[w.index] || 0);
@@ -150,19 +164,20 @@ function computeRollingCashArr(filtered = false) {
     return sum;
   });
 
-  // Find the starting rolling balance as the sum of all weeks before this range
-  let prevRolling = 0;
-  if (sIdx > 0) {
-    for (let i = 0; i < sIdx; i++) {
-      prevRolling += allWeeklySums[i];
-    }
+  // --- 1. Find the starting balance ---
+  // By default use user input, but if not set, try to get from spreadsheet (rolling row, prev col)
+  let rollingRowIdx = findRowIndex("Rolling cash balance");
+  let prevBalance = Number.isFinite(startingBalance) && startingBalance !== 0 ? startingBalance : 0;
+  if (rollingRowIdx !== -1 && sIdx > 0 && (!startingBalance || startingBalance === 0)) {
+    let prevWeekCol = weekOptions[sIdx - 1].index;
+    prevBalance = parseFloat(rawData[rollingRowIdx][prevWeekCol]) || 0;
   }
 
-  // Now, build the rolling balance for the filtered range
+  // --- 2. Build rolling balances ---
   let rollingBalance = [];
   for (let w = sIdx; w <= eIdx; w++) {
     if (w === sIdx) {
-      rollingBalance.push(prevRolling + allWeeklySums[w]);
+      rollingBalance.push(prevBalance + allWeeklySums[w]);
     } else {
       rollingBalance.push(rollingBalance[rollingBalance.length - 1] + allWeeklySums[w]);
     }
