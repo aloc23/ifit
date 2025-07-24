@@ -4,65 +4,154 @@
   <meta charset="UTF-8">
   <title>Cashflow Forecast Tool</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Chart.js, xlsx, html2canvas, jsPDF libraries here -->
+  <link rel="stylesheet" href="style.css">
   <style>
-    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f8fb; margin: 0; }
-    .container { max-width: 950px; margin: 36px auto; background: #fff; border-radius: 12px; box-shadow: 0 6px 32px #0001; padding: 32px 36px 24px 36px; }
-    h1 { color: #2377d8; font-size: 2.2em; margin-top: 0; }
-    .repayment-controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 12px; }
-    .repayment-controls input[type="number"] { padding: 6px 10px; }
-    .repayment-controls input[type="file"] { margin-right: 8px; }
-    .repayment-controls button { padding: 7px 15px; background: #e9f2fc; border: 1px solid #cde0f7; border-radius: 6px; cursor: pointer; font-weight: 500; }
-    .repayment-controls button:hover { background: #dbeafd; }
-    .summary { display: flex; flex-wrap: wrap; gap: 34px; align-items: center; background: #f4f8fb; border-radius: 7px; margin: 12px 0 16px 0; padding: 16px 20px 10px 20px; font-size: 1.14em; }
-    .summary > div { min-width: 170px; }
-    #lowestWeek details { display: inline-block; margin-left: 8px; vertical-align: middle; }
-    #lowestWeek summary { font-size: .97em; cursor: pointer; color: #2377d8; }
-    #negWeeksUl { margin: 4px 0 0 0; padding-left: 20px; }
-    .chart-controls { margin-bottom: 10px; }
-    #chartCanvas { background: #fff; border: 1px solid #e0e5ee; border-radius: 8px; margin-bottom: 18px; min-height: 320px; }
-    .repayment-row { display: flex; gap: 8px; margin: 7px 0; }
-    .repayment-row select, .repayment-row input { padding: 5px; border-radius: 4px; border: 1px solid #d1d6e0; }
-    .spreadsheet-summary-scroll { overflow-x: auto; margin-bottom: 14px; }
-    .spreadsheet-summary-table { border-collapse: collapse; min-width: 480px; }
-    .spreadsheet-summary-table th, .spreadsheet-summary-table td { border: 1px solid #e0e5ee; padding: 6px 13px; text-align: center; }
-    .spreadsheet-summary-table th.sticky-week-label { background: #f4f8fb; position: sticky; top: 0; z-index: 1; }
-    .balance-row { background: #f7fafd; }
-    #spreadsheetTable table { font-size: 0.95em; }
-    .repayment-highlight { background: #ffe7b5; }
-    #weekFilterControls { margin-bottom: 10px; }
-    .dropdown-label { font-size: 1em; color: #2377d8; margin-right: 8px; }
-    @media (max-width: 700px) {
-      .container { padding: 10px; }
-      .summary { flex-direction: column; gap: 7px; }
-      .repayment-controls { flex-direction: column; gap: 7px; }
+    .collapsible-section { margin-bottom: 24px; }
+    .toggle-btn {
+      background: #f2f7ff;
+      border: 1px solid #b6daff;
+      color: #0077cc;
+      border-radius: 5px;
+      padding: 6px 15px;
+      font-size: 15px;
+      cursor: pointer;
+      margin-bottom: 10px;
+      margin-top: 8px;
+      transition: background .18s, color .18s;
+    }
+    .toggle-btn:hover { background: #e1efff; color: #005fa3; }
+    .spreadsheet-summary-table th,
+    .spreadsheet-summary-table td {
+      text-align: center;
+      padding: 4px 8px;
+      border: 1px solid #dbeaff;
+    }
+    .spreadsheet-summary-table th {
+      background: #f0f7ff;
+      font-weight: 500;
+      position: sticky;
+      left: 0;
+      z-index: 2;
+    }
+    .spreadsheet-summary-table { border-collapse: collapse; width: 100%; }
+    .spreadsheet-summary-table .balance-row { background: #e4ffe4; font-weight: bold;}
+    .spreadsheet-summary-table .week-label-row td { background: #f7fbff; font-weight: 500;}
+    .spreadsheet-summary-table .sticky-week-label { background: #eaf5ff; position: sticky; left: 0; z-index: 1;}
+    .spreadsheet-summary-scroll { overflow-x: auto; max-width: 98vw; }
+    @media (max-width: 900px) { .spreadsheet-summary-scroll { font-size: 12px; } }
+
+    /* Week filter controls styling */
+    #weekFilterControls {
+      margin-bottom: 1em;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 1em;
+    }
+    #weekFilterControls label {
+      font-weight: 500;
+      margin-right: 3px;
+    }
+    #weekFilterControls select {
+      min-width: 120px;
+      margin-right: 8px;
+      padding: 2px 6px;
+    }
+    .repayment-row {
+      margin: 4px 0;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .repayment-row select,
+    .repayment-row input[type="number"] {
+      padding: 2px 6px;
+      min-width: 120px;
+    }
+    .repayment-highlight {
+      background: #ffe0b3 !important;
+    }
+    .chart-wrapper {
+      background: #f8fcff;
+      border: 1px solid #dbeaff;
+      border-radius: 5px;
+      padding: 8px 0 8px 0;
+    }
+    #chartCanvas {
+      width: 100%;
+      min-height: 320px;
+      max-width: 900px;
+    }
+    .summary {
+      margin: 18px 0 10px 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2em;
+      font-size: 1.15em;
+      font-weight: 500;
+      background: #f8faff;
+      border-radius: 6px;
+      padding: 10px 20px;
+      border: 1px solid #e7eefe;
+      align-items: flex-start;
+    }
+    .summary .negatives-collapse summary {
+      color: #2075d3;
+      cursor: pointer;
+      font-size: .98em;
+      margin-left: 4px;
+      display: inline-block;
+    }
+    .summary .negatives-collapse {
+      display: inline-block;
+      margin-left: 8px;
+      font-size: 1em;
+      vertical-align: middle;
+    }
+    .summary .negatives-collapse ul {
+      margin: 5px 0 0 8px;
+      padding-left: 16px;
+      font-size: .98em;
+    }
+    .loan-balance-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-bottom: 10px;
+      align-items: center;
+    }
+    .loan-balance-controls input[type="number"] {
+      padding: 6px 12px;
+      width: 190px;
+      font-size: 1em;
     }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 </head>
 <body>
   <div class="container">
     <h1>Cashflow Forecast Tool</h1>
     <div class="repayment-controls">
-      <input type="file" id="fileInput" />
-      <input type="number" id="startingBalanceInput" placeholder="Starting Balance (matches your sheet)" style="width:180px;" />
-      <input type="number" id="loanOutstandingInput" placeholder="Loan Amount Outstanding" style="width:180px;" min="0"/>
-      <button id="addRepayment">+ Add Repayment</button>
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+      <button id="addRepayment" title="Add a new repayment input">+ Add Repayment</button>
       <button id="clearRepayments">Clear Repayments</button>
       <button id="savePlan">💾 Save Plan</button>
-      <button id="loadPlan">📁 Load Plan</button>
-      <button id="exportPDF">Export to PDF</button>
+      <button id="loadPlan">📂 Load Plan</button>
       <button id="exportExcel">Export to Excel</button>
+      <button id="exportPDF">Export to PDF</button>
     </div>
-    <div id="weekFilterControls" style="margin-bottom:10px;display:none;">
-      <label class="dropdown-label">Show weeks:</label>
+    <div class="loan-balance-controls">
+      <input type="number" id="startingBalanceInput" placeholder="Starting Bank Balance (matches your sheet)">
+      <input type="number" id="loanOutstandingInput" placeholder="Loan Amount Outstanding">
+    </div>
+    <div id="weekFilterControls" style="display:none;">
+      <label for="startWeekSelect">From week:</label>
       <select id="startWeekSelect"></select>
-      <span>to</span>
+      <label for="endWeekSelect">To week:</label>
       <select id="endWeekSelect"></select>
+    </div>
+    <div class="repayment-container">
+      <div id="repaymentInputs"></div>
     </div>
     <div class="summary">
       <div id="totalRepaid">Total Repaid: €0</div>
@@ -70,29 +159,63 @@
       <div id="remaining">Remaining: €0</div>
       <div id="lowestWeek">
         Lowest Week: --
-        <details id="negativeWeeksList" style="display:none;">
+        <details class="negatives-collapse" id="negativeWeeksList" style="display:none;">
           <summary>Weeks with negative balance</summary>
           <ul id="negWeeksUl"></ul>
         </details>
       </div>
     </div>
-    <div class="chart-controls" style="margin-bottom:12px;">
-      <label for="chartType">Chart Type:</label>
-      <select id="chartType">
-        <option value="line">Line</option>
-        <option value="bar">Bar</option>
-        <option value="pie">Pie</option>
-      </select>
-      <label><input type="checkbox" id="toggleRepayments" checked> Show Repayments Overlay</label>
+    <div class="chart-controls">
+      <label>Chart Type:
+        <select id="chartType">
+          <option value="line">Line</option>
+          <option value="bar">Bar</option>
+          <option value="pie">Pie</option>
+        </select>
+      </label>
+      <label>
+        <input type="checkbox" id="toggleRepayments" checked>
+        Show Repayments Overlay
+      </label>
       <button id="resetZoom">Reset Zoom</button>
       <button id="exportPNG">Export Chart as PNG</button>
     </div>
-    <canvas id="chartCanvas" height="360"></canvas>
-    <div id="spreadsheetSummarySection"></div>
-    <div id="repaymentInputs"></div>
-    <button style="margin-top: 18px;" onclick="document.getElementById('spreadsheetTable').classList.toggle('hidden')">Show Full Spreadsheet Table</button>
-    <div id="spreadsheetTable" class="hidden" style="margin-top: 15px;"></div>
+    <div class="chart-wrapper">
+      <canvas id="chartCanvas"></canvas>
+    </div>
+    <!-- Collapsible Spreadsheet Section -->
+    <div class="collapsible-section">
+      <button class="toggle-btn" onclick="toggleTableSummary()" id="toggleTableBtn">Show Full Spreadsheet Table</button>
+      <div id="spreadsheetSummarySection">
+        <!-- Rendered by JS: week labels, income, rolling balance -->
+      </div>
+      <div id="spreadsheetTableSection" style="display:none;">
+        <div id="spreadsheetTable"></div>
+      </div>
+    </div>
   </div>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.2.2/dist/chartjs-plugin-annotation.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="script.js"></script>
+  <script>
+    // Collapsible Table Section Logic
+    let showingFullTable = false;
+    function toggleTableSummary() {
+      showingFullTable = !showingFullTable;
+      document.getElementById('spreadsheetTableSection').style.display = showingFullTable ? '' : 'none';
+      document.getElementById('spreadsheetSummarySection').style.display = showingFullTable ? 'none' : '';
+      document.getElementById('toggleTableBtn').textContent = showingFullTable ? "Hide Full Spreadsheet Table" : "Show Full Spreadsheet Table";
+    }
+    // Auto-show summary on load (default)
+    document.addEventListener('DOMContentLoaded', () => {
+      showingFullTable = false;
+      document.getElementById('spreadsheetTableSection').style.display = 'none';
+      document.getElementById('spreadsheetSummarySection').style.display = '';
+    });
+  </script>
 </body>
 </html>
