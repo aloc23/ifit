@@ -1,5 +1,5 @@
 // Cashflow Forecast Tool -- Merged/Updated Version
-// Features: Starting/Loan Inputs, Negative Weeks Dropdown, Robust Chart Rendering
+// Features: Starting/Loan Inputs, Negative Weeks Dropdown, Robust Chart Rendering, Repayment Row Edit/Remove
 
 let rawData = [];
 let chart;
@@ -134,8 +134,8 @@ function setRepaymentForWeek(weekIdx, amount) {
 function getRepaymentData(filtered = false) {
   let totalRepayment = 0;
   document.querySelectorAll('.repayment-row').forEach(row => {
-    const weekIdx = parseInt(row.children[0].value);
-    let amount = parseFloat(row.children[1].value) || 0;
+    const weekIdx = parseInt(row.querySelector('select').value);
+    let amount = parseFloat(row.querySelector('input[type="number"]').value) || 0;
     if (!isNaN(amount)) {
       setRepaymentForWeek(weekIdx, amount);
       totalRepayment += Math.abs(amount);
@@ -277,7 +277,7 @@ function updateWeekFilter() {
 
 function updateRepaymentRowsForFilter() {
   document.querySelectorAll('.repayment-row').forEach(row => {
-    const weekIdx = parseInt(row.children[0].value);
+    const weekIdx = parseInt(row.querySelector('select').value);
     const weekArrIdx = weekOptions.findIndex(w => w.index == weekIdx);
     if (weekArrIdx < weekFilterRange[0] || weekArrIdx > weekFilterRange[1]) {
       row.style.display = "none";
@@ -287,10 +287,12 @@ function updateRepaymentRowsForFilter() {
   });
 }
 
+// --- Repayment Row With Edit/Remove Buttons ---
 function addRepaymentRow(weekIndex = null, amount = null) {
   const row = document.createElement('div');
   row.className = 'repayment-row';
 
+  // Week select
   const weekSelect = document.createElement('select');
   weekOptions.forEach((week, idx) => {
     if (idx < weekFilterRange[0] || idx > weekFilterRange[1]) return;
@@ -301,19 +303,79 @@ function addRepaymentRow(weekIndex = null, amount = null) {
   });
   if (weekIndex !== null) weekSelect.value = weekIndex;
 
+  // Amount input
   const amountInput = document.createElement('input');
   amountInput.type = 'number';
   amountInput.placeholder = 'Repayment €';
   if (amount !== null) amountInput.value = amount;
 
-  weekSelect.addEventListener('change', () => { recalculateAndRender(true); });
-  amountInput.addEventListener('input', () => { recalculateAndRender(true); });
+  // Edit button
+  const editBtn = document.createElement('button');
+  editBtn.textContent = 'Edit';
+  editBtn.type = 'button';
+  editBtn.style.marginLeft = "6px";
+  let isEditing = false;
+
+  // Remove button
+  const removeBtn = document.createElement('button');
+  removeBtn.textContent = 'Remove';
+  removeBtn.type = 'button';
+  removeBtn.style.marginLeft = "6px";
+
+  // Save logic
+  function saveEdit() {
+    weekSelect.disabled = true;
+    amountInput.disabled = true;
+    editBtn.textContent = 'Edit';
+    isEditing = false;
+    recalculateAndRender(true);
+  }
+
+  // Edit logic
+  editBtn.onclick = () => {
+    isEditing = !isEditing;
+    weekSelect.disabled = !isEditing;
+    amountInput.disabled = !isEditing;
+    editBtn.textContent = isEditing ? 'Save' : 'Edit';
+    if (!isEditing) {
+      saveEdit();
+    }
+  };
+
+  // Remove logic
+  removeBtn.onclick = () => {
+    // Clear repayment in rawData
+    const repayRow = findRepaymentRowIndex();
+    if (repayRow !== -1) {
+      rawData[repayRow][weekSelect.value] = '';
+    }
+    row.remove();
+    recalculateAndRender(true);
+  };
+
+  // Listen for changes
+  weekSelect.addEventListener('change', () => {
+    if (!isEditing) saveEdit();
+    recalculateAndRender(true);
+  });
+  amountInput.addEventListener('input', () => {
+    if (!isEditing) saveEdit();
+    recalculateAndRender(true);
+  });
+
+  // Default to "not editing" after creation
+  weekSelect.disabled = true;
+  amountInput.disabled = true;
 
   row.appendChild(weekSelect);
   row.appendChild(amountInput);
+  row.appendChild(editBtn);
+  row.appendChild(removeBtn);
 
   repaymentInputs.appendChild(row);
 }
+
+// --- End Repayment Row Edit/Remove ---
 
 function clearRepayments() {
   repaymentInputs.innerHTML = '';
@@ -578,8 +640,8 @@ function savePlan() {
   const repayments = [];
   document.querySelectorAll('.repayment-row').forEach(row => {
     repayments.push({
-      weekIndex: row.children[0].value,
-      amount: row.children[1].value
+      weekIndex: row.querySelector('select').value,
+      amount: row.querySelector('input[type="number"]').value
     });
   });
   localStorage.setItem('repaymentPlan', JSON.stringify(repayments));
