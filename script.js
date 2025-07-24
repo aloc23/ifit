@@ -1,4 +1,4 @@
-// --- Cashflow Forecast Tool: Weekly Repayment Filtering Implementation (ROW 5 DOWN VERSION) ---
+// --- Cashflow Forecast Tool: Final Version, Weekly Income & Rolling Cash Balance from Row 5 Down Only ---
 
 let rawData = [];
 let chart;
@@ -11,12 +11,12 @@ let lowestWeekCache = { value: null, index: null, label: null };
 let weekLabels = [];
 let weekFilterRange = [0, 0];
 
-// Adjust these to match your sheet's actual structure!
-const LABEL_COL = 1; // Column B (index 1) for all label lookups
-const weeksHeaderRowIdx = 3; // Usually header is on row 4 (0-based index 3)
-const startRow = 4;  // CH5 in Excel (row 5, 0-based index 4)
-const endRow = 269;  // CH270 in Excel (row 270, 0-based index 269)
-const firstWeekCol = 5; // Column F (0-based index 5)
+// Sheet structure (adjust if your sheet is different)
+const LABEL_COL = 1; // Column B (index 1) for label lookups
+const weeksHeaderRowIdx = 3; // Header row (index 3, i.e. Excel row 4)
+const startRow = 4;  // Data starts at CH5 (Excel row 5, index 4)
+const endRow = 269;  // Data ends at CH270 (Excel row 270, index 269)
+const firstWeekCol = 5; // Column F (index 5)
 
 const fileInput = document.getElementById('fileInput');
 const addRepaymentBtn = document.getElementById('addRepayment');
@@ -67,11 +67,11 @@ function findRowIndex(label) {
 }
 
 function findRepaymentRowIndex() {
-  // Change this if your label is different!
+  // Adjust as needed for your actual label!
   return findRowIndex("Mayweather Investment Repayment (Investment 1 and 2)");
 }
 
-// --- Detect week columns: F onward ---
+// Find week columns starting at F
 function extractWeekOptions(data) {
   const weeksRow = data[weeksHeaderRowIdx] || [];
   weekOptions = [];
@@ -86,7 +86,6 @@ function extractWeekOptions(data) {
   weekFilterRange = [0, weekLabels.length-1];
 }
 
-// --- Only sum from row 5 down ---
 function computeWeeklyIncomes(filtered = false) {
   let weeklyIncome = [];
   let sIdx = filtered ? weekFilterRange[0] : 0;
@@ -94,7 +93,7 @@ function computeWeeklyIncomes(filtered = false) {
   for (let w = sIdx; w <= eIdx; w++) {
     const weekCol = weekOptions[w].index;
     let sum = 0;
-    for (let r = startRow; r <= endRow; r++) { // Only rows 5 and below
+    for (let r = startRow; r <= endRow; r++) { // Only rows 5 and down
       const val = parseFloat(rawData[r]?.[weekCol] || 0);
       if (!isNaN(val)) sum += val;
     }
@@ -135,33 +134,37 @@ function getRepaymentData(filtered = false) {
   return { repaymentsArr, totalRepayment };
 }
 
-// --- Rolling Cash Balance: sum ONLY row 5 down for each week ---
+// --- Rolling Cash Balance: always matches spreadsheet logic ---
+// For filtered views, starts from correct prior rolling balance
 function computeRollingCashArr(filtered = false) {
-  const rollingRowIdx = findRowIndex("Rolling cash balance");
-  if (rollingRowIdx === -1) return weekOptions.map(() => 0);
-
-  let rollingBalance = [];
   let sIdx = filtered ? weekFilterRange[0] : 0;
   let eIdx = filtered ? weekFilterRange[1] : weekOptions.length-1;
 
-  let initialWeekCol = weekOptions[sIdx].index;
-  let prevWeekCol = initialWeekCol - 1;
-  let prevRolling = (prevWeekCol >= firstWeekCol)
-    ? parseFloat(rawData[rollingRowIdx][prevWeekCol]) || 0
-    : 0;
-
-  for (let w = sIdx; w <= eIdx; w++) {
-    const weekCol = weekOptions[w].index;
-    // Only use the sum of row 5 down for this week column
-    let weekSum = 0;
-    for (let r = startRow; r <= endRow; r++) { // Only rows 5 and below
-      const val = parseFloat(rawData[r]?.[weekCol] || 0);
-      if (!isNaN(val)) weekSum += val;
+  // Compute the sum for each week from row 5 down
+  let allWeeklySums = weekOptions.map((w, i) => {
+    let sum = 0;
+    for (let r = startRow; r <= endRow; r++) {
+      const val = parseFloat(rawData[r]?.[w.index] || 0);
+      if (!isNaN(val)) sum += val;
     }
+    return sum;
+  });
+
+  // Find the starting rolling balance as the sum of all weeks before this range
+  let prevRolling = 0;
+  if (sIdx > 0) {
+    for (let i = 0; i < sIdx; i++) {
+      prevRolling += allWeeklySums[i];
+    }
+  }
+
+  // Now, build the rolling balance for the filtered range
+  let rollingBalance = [];
+  for (let w = sIdx; w <= eIdx; w++) {
     if (w === sIdx) {
-      rollingBalance.push(prevRolling + weekSum);
+      rollingBalance.push(prevRolling + allWeeklySums[w]);
     } else {
-      rollingBalance.push(rollingBalance[rollingBalance.length-1] + weekSum);
+      rollingBalance.push(rollingBalance[rollingBalance.length - 1] + allWeeklySums[w]);
     }
   }
   return rollingBalance;
@@ -173,7 +176,7 @@ function recalculateAndRender(filtered = false) {
   const weeklyIncome = computeWeeklyIncomes(filtered);
   const rollingBalance = computeRollingCashArr(filtered);
 
-  // Find lowest week (filtered or full)
+  // Find lowest week
   let offset = filtered ? weekFilterRange[0] : 0;
   let lowestWeek = { value: Infinity, index: null, label: '' };
   for (let i = 0; i < rollingBalance.length; i++) {
