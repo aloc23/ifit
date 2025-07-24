@@ -1,4 +1,4 @@
-// --- Cashflow Forecast Tool: Weekly Repayment Filtering Implementation (FINAL FIXED VERSION) ---
+// --- Cashflow Forecast Tool: Weekly Repayment Filtering Implementation (ROW 5 DOWN VERSION) ---
 
 let rawData = [];
 let chart;
@@ -73,7 +73,6 @@ function findRepaymentRowIndex() {
 
 // --- Detect week columns: F onward ---
 function extractWeekOptions(data) {
-  // F onward, pick header row
   const weeksRow = data[weeksHeaderRowIdx] || [];
   weekOptions = [];
   weekLabels = [];
@@ -87,6 +86,7 @@ function extractWeekOptions(data) {
   weekFilterRange = [0, weekLabels.length-1];
 }
 
+// --- Only sum from row 5 down ---
 function computeWeeklyIncomes(filtered = false) {
   let weeklyIncome = [];
   let sIdx = filtered ? weekFilterRange[0] : 0;
@@ -94,7 +94,7 @@ function computeWeeklyIncomes(filtered = false) {
   for (let w = sIdx; w <= eIdx; w++) {
     const weekCol = weekOptions[w].index;
     let sum = 0;
-    for (let r = startRow; r <= endRow; r++) {
+    for (let r = startRow; r <= endRow; r++) { // Only rows 5 and below
       const val = parseFloat(rawData[r]?.[weekCol] || 0);
       if (!isNaN(val)) sum += val;
     }
@@ -118,7 +118,6 @@ function getRepaymentsArr(filtered = false) {
 function setRepaymentForWeek(weekIdx, amount) {
   const repayRow = findRepaymentRowIndex();
   if (repayRow !== -1) {
-    // Always store repayments as negative!
     rawData[repayRow][weekIdx] = amount > 0 ? -Math.abs(amount) : amount;
   }
 }
@@ -136,7 +135,7 @@ function getRepaymentData(filtered = false) {
   return { repaymentsArr, totalRepayment };
 }
 
-// --- FIXED: Rolling Cash Balance Calculation for Filtered Weeks, using up-to-date rawData for all weeks ---
+// --- Rolling Cash Balance: sum ONLY row 5 down for each week ---
 function computeRollingCashArr(filtered = false) {
   const rollingRowIdx = findRowIndex("Rolling cash balance");
   if (rollingRowIdx === -1) return weekOptions.map(() => 0);
@@ -145,8 +144,6 @@ function computeRollingCashArr(filtered = false) {
   let sIdx = filtered ? weekFilterRange[0] : 0;
   let eIdx = filtered ? weekFilterRange[1] : weekOptions.length-1;
 
-  // We always want to recalculate the rolling for the filtered range using up-to-date rawData.
-  // For the first week in the filtered range, start from previous week's rolling balance (rawData) if available, else 0.
   let initialWeekCol = weekOptions[sIdx].index;
   let prevWeekCol = initialWeekCol - 1;
   let prevRolling = (prevWeekCol >= firstWeekCol)
@@ -155,13 +152,16 @@ function computeRollingCashArr(filtered = false) {
 
   for (let w = sIdx; w <= eIdx; w++) {
     const weekCol = weekOptions[w].index;
-    // Use current value in the row before rolling cash balance (income/outgoings + repayments)
-    const prevRowVal = parseFloat(rawData[rollingRowIdx-1][weekCol] || 0);
-
+    // Only use the sum of row 5 down for this week column
+    let weekSum = 0;
+    for (let r = startRow; r <= endRow; r++) { // Only rows 5 and below
+      const val = parseFloat(rawData[r]?.[weekCol] || 0);
+      if (!isNaN(val)) weekSum += val;
+    }
     if (w === sIdx) {
-      rollingBalance.push(prevRolling + prevRowVal);
+      rollingBalance.push(prevRolling + weekSum);
     } else {
-      rollingBalance.push(rollingBalance[rollingBalance.length-1] + prevRowVal);
+      rollingBalance.push(rollingBalance[rollingBalance.length-1] + weekSum);
     }
   }
   return rollingBalance;
@@ -243,7 +243,6 @@ function updateWeekFilter() {
   let eIdx = parseInt(endWeekSelect.value, 10);
   if (eIdx < sIdx) eIdx = sIdx;
   weekFilterRange = [sIdx, eIdx];
-  // Hide/show repayment rows as needed
   updateRepaymentRowsForFilter();
   recalculateAndRender(true);
 }
@@ -251,7 +250,6 @@ function updateWeekFilter() {
 function updateRepaymentRowsForFilter() {
   document.querySelectorAll('.repayment-row').forEach(row => {
     const weekIdx = parseInt(row.children[0].value);
-    // The value is the weekOptions index (column index) not the weekOptions array index!
     const weekArrIdx = weekOptions.findIndex(w => w.index == weekIdx);
     if (weekArrIdx < weekFilterRange[0] || weekArrIdx > weekFilterRange[1]) {
       row.style.display = "none";
