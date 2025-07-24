@@ -1,4 +1,4 @@
-// --- Cashflow Forecast Tool: Weekly Repayment Filtering Implementation ---
+// --- Cashflow Forecast Tool: Weekly Repayment Filtering Implementation (Revised) ---
 
 let rawData = [];
 let chart;
@@ -67,6 +67,7 @@ function findRowIndex(label) {
 }
 
 function findRepaymentRowIndex() {
+  // Change this if your label is different!
   return findRowIndex("Mayweather Investment Repayment (Investment 1 and 2)");
 }
 
@@ -86,9 +87,11 @@ function extractWeekOptions(data) {
   weekFilterRange = [0, weekLabels.length-1];
 }
 
-function computeWeeklyIncomes() {
+function computeWeeklyIncomes(filtered = false) {
   let weeklyIncome = [];
-  for (let w = 0; w < weekOptions.length; w++) {
+  let sIdx = filtered ? weekFilterRange[0] : 0;
+  let eIdx = filtered ? weekFilterRange[1] : weekOptions.length - 1;
+  for (let w = sIdx; w <= eIdx; w++) {
     const weekCol = weekOptions[w].index;
     let sum = 0;
     for (let r = startRow; r <= endRow; r++) {
@@ -115,6 +118,7 @@ function getRepaymentsArr(filtered = false) {
 function setRepaymentForWeek(weekIdx, amount) {
   const repayRow = findRepaymentRowIndex();
   if (repayRow !== -1) {
+    // Always store repayments as negative!
     rawData[repayRow][weekIdx] = amount > 0 ? -Math.abs(amount) : amount;
   }
 }
@@ -132,19 +136,30 @@ function getRepaymentData(filtered = false) {
   return { repaymentsArr, totalRepayment };
 }
 
+// --- FIXED: Rolling Cash Balance Calculation for Filtered Weeks ---
 function computeRollingCashArr(filtered = false) {
   const rollingRowIdx = findRowIndex("Rolling cash balance");
   if (rollingRowIdx === -1) return weekOptions.map(() => 0);
+
   let rollingBalance = [];
-  // Only compute over filtered weeks if needed
-  let start = filtered ? weekFilterRange[0] : 0;
-  let end = filtered ? weekFilterRange[1] : weekOptions.length-1;
-  for (let w = start; w <= end; w++) {
+  let sIdx = filtered ? weekFilterRange[0] : 0;
+  let eIdx = filtered ? weekFilterRange[1] : weekOptions.length-1;
+
+  let initialWeekCol = weekOptions[sIdx].index;
+  let prevWeekCol = initialWeekCol - 1;
+
+  // Get previous week's rolling balance as starting value (if available)
+  let prevRolling = (prevWeekCol >= firstWeekCol)
+    ? parseFloat(rawData[rollingRowIdx][prevWeekCol]) || 0
+    : 0;
+
+  for (let w = sIdx; w <= eIdx; w++) {
     const weekCol = weekOptions[w].index;
     const prevRowVal = parseFloat(rawData[rollingRowIdx-1][weekCol] || 0);
-    if (w === 0) {
-      const prevColBal = parseFloat(rawData[rollingRowIdx][weekCol - 1]) || 0;
-      rollingBalance.push(prevColBal + prevRowVal);
+
+    if (w === sIdx) {
+      // For the first week in the selection, use previous rolling + this week's prevRowVal
+      rollingBalance.push(prevRolling + prevRowVal);
     } else {
       rollingBalance.push(rollingBalance[rollingBalance.length-1] + prevRowVal);
     }
@@ -155,7 +170,7 @@ function computeRollingCashArr(filtered = false) {
 function recalculateAndRender(filtered = false) {
   if (weekOptions.length === 0 || rawData.length === 0) return;
   const { repaymentsArr, totalRepayment } = getRepaymentData(filtered);
-  const weeklyIncome = computeWeeklyIncomes();
+  const weeklyIncome = computeWeeklyIncomes(filtered);
   const rollingBalance = computeRollingCashArr(filtered);
 
   // Find lowest week (filtered or full)
@@ -236,7 +251,9 @@ function updateWeekFilter() {
 function updateRepaymentRowsForFilter() {
   document.querySelectorAll('.repayment-row').forEach(row => {
     const weekIdx = parseInt(row.children[0].value);
-    if (weekIdx < weekFilterRange[0] + firstWeekCol || weekIdx > weekFilterRange[1] + firstWeekCol) {
+    // The value is the weekOptions index (column index) not the weekOptions array index!
+    const weekArrIdx = weekOptions.findIndex(w => w.index == weekIdx);
+    if (weekArrIdx < weekFilterRange[0] || weekArrIdx > weekFilterRange[1]) {
       row.style.display = "none";
     } else {
       row.style.display = "";
@@ -251,7 +268,6 @@ function addRepaymentRow(weekIndex = null, amount = null) {
 
   const weekSelect = document.createElement('select');
   weekOptions.forEach((week, idx) => {
-    // Only add weeks in filter range
     if (idx < weekFilterRange[0] || idx > weekFilterRange[1]) return;
     const option = document.createElement('option');
     option.value = week.index;
@@ -416,9 +432,9 @@ function renderSpreadsheetSummary(incomeArr, balanceArr, filtered = false) {
   const incomeLabel = document.createElement('td');
   incomeLabel.textContent = "Income";
   trIncome.appendChild(incomeLabel);
-  incomeArr.slice(sIdx, eIdx+1).forEach(val => {
+  incomeArr.forEach(val => {
     const td = document.createElement('td');
-    td.textContent = "€" + Math.round(val);
+    td.textContent = "€" + (isNaN(val) ? '' : Math.round(val));
     trIncome.appendChild(td);
   });
   table.appendChild(trIncome);
@@ -431,7 +447,7 @@ function renderSpreadsheetSummary(incomeArr, balanceArr, filtered = false) {
   trBal.appendChild(balLabel);
   balanceArr.forEach(val => {
     const td = document.createElement('td');
-    td.textContent = "€" + Math.round(val);
+    td.textContent = "€" + (isNaN(val) ? '' : Math.round(val));
     trBal.appendChild(td);
   });
   table.appendChild(trBal);
@@ -475,9 +491,9 @@ function renderTable(repaymentData = null, balanceArr = null, incomeArr = null, 
   if (incomeArr) {
     const trIncome = document.createElement('tr');
     trIncome.className = 'balance-row';
-    for (let i = sIdx; i <= eIdx; i++) {
+    for (let i = 0; i < incomeArr.length; i++) {
       const td = document.createElement('td');
-      td.textContent = `Income: €${Math.round(incomeArr[i])}`;
+      td.textContent = `Income: €${isNaN(incomeArr[i]) ? '' : Math.round(incomeArr[i])}`;
       trIncome.appendChild(td);
     }
     table.appendChild(trIncome);
@@ -489,7 +505,7 @@ function renderTable(repaymentData = null, balanceArr = null, incomeArr = null, 
     trBal.className = 'balance-row';
     for (let i = 0; i < balanceArr.length; i++) {
       const td = document.createElement('td');
-      td.textContent = `Bal: €${Math.round(balanceArr[i])}`;
+      td.textContent = `Bal: €${isNaN(balanceArr[i]) ? '' : Math.round(balanceArr[i])}`;
       trBal.appendChild(td);
     }
     table.appendChild(trBal);
