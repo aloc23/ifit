@@ -1,4 +1,4 @@
-// --- Cashflow Forecast Tool: Weekly Repayment Filtering Implementation (Revised) ---
+// --- Cashflow Forecast Tool: Weekly Repayment Filtering Implementation (FINAL FIXED VERSION) ---
 
 let rawData = [];
 let chart;
@@ -136,7 +136,7 @@ function getRepaymentData(filtered = false) {
   return { repaymentsArr, totalRepayment };
 }
 
-// --- FIXED: Rolling Cash Balance Calculation for Filtered Weeks ---
+// --- FIXED: Rolling Cash Balance Calculation for Filtered Weeks, using up-to-date rawData for all weeks ---
 function computeRollingCashArr(filtered = false) {
   const rollingRowIdx = findRowIndex("Rolling cash balance");
   if (rollingRowIdx === -1) return weekOptions.map(() => 0);
@@ -145,20 +145,20 @@ function computeRollingCashArr(filtered = false) {
   let sIdx = filtered ? weekFilterRange[0] : 0;
   let eIdx = filtered ? weekFilterRange[1] : weekOptions.length-1;
 
+  // We always want to recalculate the rolling for the filtered range using up-to-date rawData.
+  // For the first week in the filtered range, start from previous week's rolling balance (rawData) if available, else 0.
   let initialWeekCol = weekOptions[sIdx].index;
   let prevWeekCol = initialWeekCol - 1;
-
-  // Get previous week's rolling balance as starting value (if available)
   let prevRolling = (prevWeekCol >= firstWeekCol)
     ? parseFloat(rawData[rollingRowIdx][prevWeekCol]) || 0
     : 0;
 
   for (let w = sIdx; w <= eIdx; w++) {
     const weekCol = weekOptions[w].index;
+    // Use current value in the row before rolling cash balance (income/outgoings + repayments)
     const prevRowVal = parseFloat(rawData[rollingRowIdx-1][weekCol] || 0);
 
     if (w === sIdx) {
-      // For the first week in the selection, use previous rolling + this week's prevRowVal
       rollingBalance.push(prevRolling + prevRowVal);
     } else {
       rollingBalance.push(rollingBalance[rollingBalance.length-1] + prevRowVal);
