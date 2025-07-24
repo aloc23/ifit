@@ -1,4 +1,5 @@
-// --- Cashflow Forecast Tool: Final Version with UI Feedback Improvements ---
+// Cashflow Forecast Tool -- Merged/Updated Version
+// Features: Starting/Loan Inputs, Negative Weeks Dropdown, Robust Chart Rendering
 
 let rawData = [];
 let chart;
@@ -52,7 +53,7 @@ savePlanBtn.addEventListener('click', savePlan);
 loadPlanBtn.addEventListener('click', loadPlan);
 exportExcelBtn.addEventListener('click', exportToExcel);
 exportPDFBtn.addEventListener('click', exportToPDF);
-exportPNGBtn.addEventListener('click', exportChartPNG);
+if (exportPNGBtn) exportPNGBtn.addEventListener('click', exportChartPNG);
 chartTypeSelect.addEventListener('change', function() {
   chartType = this.value;
   recalculateAndRender();
@@ -209,7 +210,11 @@ function recalculateAndRender(filtered = false) {
   document.getElementById('remaining').textContent = `Remaining: €${remaining.toLocaleString()}`;
 
   // Lowest week and negative weeks list
-  document.getElementById('lowestWeek').childNodes[0].textContent = `Lowest Week: ${lowestWeek.label} ${lowestWeek.value !== Infinity ? ` (€${Math.round(lowestWeek.value)})` : ''} `;
+  let lowestLabel = `Lowest Week: ${lowestWeek.label}`;
+  if (lowestWeek.value !== Infinity && lowestWeek.label) {
+    lowestLabel += ` (€${Math.round(lowestWeek.value)})`;
+  }
+  document.getElementById('lowestWeek').childNodes[0].textContent = lowestLabel + " ";
   const negWeeksUl = document.getElementById('negWeeksUl');
   negWeeksUl.innerHTML = negWeeks.length ? negWeeks.map(w => `<li>${w}</li>`).join('') : '<li>None</li>';
   document.getElementById('negativeWeeksList').style.display = negWeeks.length ? "inline-block" : "none";
@@ -322,16 +327,24 @@ function clearRepayments() {
 }
 
 function renderChart(cashflowData = null, repaymentData = null, incomeData = null, filtered = false) {
-  const ctx = document.getElementById('chartCanvas').getContext('2d');
+  const canvas = document.getElementById('chartCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
   if (chart) chart.destroy();
 
   let sIdx = filtered ? weekFilterRange[0] : 0;
   let eIdx = filtered ? weekFilterRange[1] : weekLabels.length - 1;
   let labels = weekLabels.slice(sIdx, eIdx+1);
 
+  // Defensive: If labels or data are empty, don't render chart
+  if (!labels.length || !cashflowData || cashflowData.length === 0) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    return;
+  }
+
   let datasets = [{
     label: 'Rolling Cash Balance',
-    data: cashflowData ? cashflowData : labels.map(() => 0),
+    data: cashflowData,
     borderColor: '#0077cc',
     backgroundColor: chartType === 'bar' ? '#b3d7f6' : 'rgba(0, 119, 204, 0.09)',
     borderWidth: 2,
