@@ -1,5 +1,4 @@
-// Cashflow Forecast Tool -- Merged/Updated Version
-// Features: Starting/Loan Inputs, Negative Weeks Dropdown, Robust Chart Rendering, Repayment Row Edit/Remove
+// Cashflow Forecast Tool -- Repayment Row Edit/Remove + Fix Old Repayment + Highlight Repayment Weeks
 
 let rawData = [];
 let chart;
@@ -287,7 +286,7 @@ function updateRepaymentRowsForFilter() {
   });
 }
 
-// --- Repayment Row With Edit/Remove Buttons ---
+// --- Repayment Row With Edit/Remove Buttons and Fixes ---
 function addRepaymentRow(weekIndex = null, amount = null) {
   const row = document.createElement('div');
   row.className = 'repayment-row';
@@ -322,30 +321,34 @@ function addRepaymentRow(weekIndex = null, amount = null) {
   removeBtn.type = 'button';
   removeBtn.style.marginLeft = "6px";
 
-  // Save logic
+  // Track previous week index for cleanup
+  let repayRow = findRepaymentRowIndex();
+  let previousWeekIndex = weekSelect.value;
+
   function saveEdit() {
     weekSelect.disabled = true;
     amountInput.disabled = true;
     editBtn.textContent = 'Edit';
     isEditing = false;
+    // Clear old repayment if week changed
+    if (repayRow !== -1 && previousWeekIndex !== weekSelect.value) {
+      rawData[repayRow][previousWeekIndex] = '';
+      previousWeekIndex = weekSelect.value;
+    }
     recalculateAndRender(true);
   }
 
-  // Edit logic
   editBtn.onclick = () => {
     isEditing = !isEditing;
     weekSelect.disabled = !isEditing;
     amountInput.disabled = !isEditing;
     editBtn.textContent = isEditing ? 'Save' : 'Edit';
-    if (!isEditing) {
-      saveEdit();
-    }
+    if (!isEditing) saveEdit();
   };
 
-  // Remove logic
   removeBtn.onclick = () => {
     // Clear repayment in rawData
-    const repayRow = findRepaymentRowIndex();
+    repayRow = findRepaymentRowIndex();
     if (repayRow !== -1) {
       rawData[repayRow][weekSelect.value] = '';
     }
@@ -353,7 +356,6 @@ function addRepaymentRow(weekIndex = null, amount = null) {
     recalculateAndRender(true);
   };
 
-  // Listen for changes
   weekSelect.addEventListener('change', () => {
     if (!isEditing) saveEdit();
     recalculateAndRender(true);
@@ -497,6 +499,7 @@ function renderChart(cashflowData = null, repaymentData = null, incomeData = nul
   });
 }
 
+// --- Highlight Repayment Weeks in Summary ---
 function renderSpreadsheetSummary(incomeArr, balanceArr, filtered = false) {
   const section = document.getElementById('spreadsheetSummarySection');
   section.innerHTML = "";
@@ -509,14 +512,21 @@ function renderSpreadsheetSummary(incomeArr, balanceArr, filtered = false) {
   const table = document.createElement('table');
   table.className = 'spreadsheet-summary-table';
 
-  // Week label row
+  const repayRowIdx = findRepaymentRowIndex();
+
+  // Week label row (with repayment highlight)
   const trWeeks = document.createElement('tr');
   trWeeks.className = 'week-label-row';
   trWeeks.appendChild(document.createElement('th'));
-  weekLabels.slice(sIdx, eIdx+1).forEach(w => {
+  weekLabels.slice(sIdx, eIdx+1).forEach((w, idx) => {
     const th = document.createElement('th');
     th.textContent = w;
     th.className = 'sticky-week-label';
+    const weekOptIdx = sIdx + idx;
+    const weekCol = weekOptions[weekOptIdx].index;
+    if (repayRowIdx !== -1 && rawData[repayRowIdx][weekCol] && parseFloat(rawData[repayRowIdx][weekCol]) !== 0) {
+      th.classList.add('repayment-highlight');
+    }
     trWeeks.appendChild(th);
   });
   table.appendChild(trWeeks);
@@ -550,6 +560,8 @@ function renderSpreadsheetSummary(incomeArr, balanceArr, filtered = false) {
   div.appendChild(table);
   section.appendChild(div);
 }
+
+// --- End Highlight Repayment Weeks ---
 
 function renderTable(repaymentData = null, balanceArr = null, incomeArr = null, filtered = false) {
   const oldTable = document.getElementById('spreadsheetTable');
