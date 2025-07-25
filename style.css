@@ -216,3 +216,8 @@ table {
   margin-bottom: 10px;
   box-shadow: 0 1px 4px rgba(20,50,120,0.05);
 }
+
+.repayment-highlight {
+  background: #ffe4b3;
+  border-bottom: 2px solid #ff9900;
+}
